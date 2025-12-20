@@ -1,0 +1,12 @@
+test3/nodes.txt
+test3/f.txt
+test3/elems.txt
+125
+384
+0
+test3/dirih.txt
+8
+test3/neumann.txt
+192
+test5/robin.txt
+0
