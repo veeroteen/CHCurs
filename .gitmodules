@@ -1,0 +1,3 @@
+[submodule "Calculator/exprtk"]
+	path = Calculator/exprtk
+	url = https://github.com/ArashPartow/exprtk.git

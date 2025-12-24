@@ -1,19 +1,25 @@
 #pragma once
 #include <array>
+#include <string>
 #include <vector>
 double u(std::array<double,3> &cords)
 {
 	return cords[0] + cords[1] + cords[2];
 
 }
-
-size_t gu(std::array<double,3> &normal,std::vector<double> &poly)
+void ustr(std::string &fun)
 {
-	poly.resize(1);
-	poly[0] += normal[0] * 1;
-	poly[0] += normal[1] * 1;
-	poly[0] += normal[2] * 1;
-	return 1;
+	fun = "x + y + z";
+}
+
+void gu(std::array<double,3> &normal,std::string &poly)
+{
+	double a = 0;
+	a += normal[0] * 1;
+	a += normal[1] * 1;
+	a += normal[2] * 1;
+	poly = std::to_string(2*a);
+	return;
 }
 double dgu(std::array<double,3> &cords)
 {
@@ -25,18 +31,91 @@ double u2(std::array<double, 3> &cords)
 	return cords[0]* cords[0] + cords[1]* cords[1] + cords[2]* cords[2];
 
 }
-
-size_t gu2(std::array<double, 3> &normal, std::vector<double> &poly)
+void u2str(std::string &fun)
 {
-	poly.resize(4);
-	poly[0] = 0;
-	poly[1] = 2 * normal[0];
-	poly[2] = 2 * normal[1];
-	poly[3] = 2 * normal[2];
-	return 4;
+	fun = "x^2 + y^2 + z^2";
+}
+
+void gu2(std::array<double, 3> &normal, std::string &poly)
+{
+	if (normal[0] != 0)
+	{
+		poly += std::to_string(normal[0]) + "*2*x";
+	}
+	if (normal[1] != 0)
+	{
+		poly += std::to_string(normal[1]) + "*2*y";
+	}
+	if (normal[2] != 0)
+	{
+		poly += std::to_string(normal[2]) + "*2*z";
+	}
 }
 
 double dgu2(std::array<double, 3> &cords)
 {
 	return -6;
+}
+
+double usin(std::array<double, 3> &cords)
+{
+	return sin(cords[0] + cords[1] + cords[2]);
+
+}
+void ustrsin(std::string &fun)
+{
+	fun = "sin(x + y + z)";
+}
+
+void gusin(std::array<double, 3> &normal, std::string &poly)
+{
+	if (normal[0] != 0) 
+	{
+		poly += std::to_string(normal[0]) + "*cos(x+y+z)";
+	}
+	if (normal[1] != 0)
+	{
+		poly += std::to_string(normal[1]) + "*cos(x+y+z)";
+	}
+	if (normal[2] != 0)
+	{
+		poly += std::to_string(normal[2]) + "*cos(x+y+z)";
+	}
+
+	return;
+}
+double dgusin(std::array<double, 3> &cords)
+{
+	return 3*sin(cords[0] + cords[1] + cords[2]);
+}
+
+double u3(std::array<double, 3> &cords)
+{
+	return cords[0] * cords[0]* cords[0] + cords[1]* cords[1] * cords[1] + cords[2] * cords[2]* cords[2];
+
+}
+void u3str(std::string &fun)
+{
+	fun = "x^3 + y^3 + z^3";
+}
+
+void gu3(std::array<double, 3> &normal, std::string &poly)
+{
+	if (normal[0] != 0)
+	{
+		poly += std::to_string(normal[0]) + "*3x^2";
+	}
+	if (normal[1] != 0)
+	{
+		poly += std::to_string(normal[1]) + "*3y^2";
+	}
+	if (normal[2] != 0)
+	{
+		poly += std::to_string(normal[2]) + "*3z^2";
+	}
+}
+
+double dgu3(std::array<double, 3> &cords)
+{
+	return -6*(cords[0] + cords[1] + cords[2]);
 }

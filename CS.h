@@ -750,7 +750,7 @@ public:
 	{
 		for (auto &a : *x)
 		{
-			std::cout << std::setprecision(16) << a << std::endl;
+			std::cout << std::setprecision(18) << a << std::endl;
 		}
 	}
 };
