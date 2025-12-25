@@ -235,7 +235,7 @@ public:
 			chain = { element[0],element[1],element[3] };
 			if (onEdge(chain, normal))
 			{
-				file << chain[0] << " " << chain[1] << " " << chain[2] << " " << i << " ";
+				file << chain[0] << " " << chain[1] << " " << chain[2] << " " << i << " " << beta  << " ";
 				std::string fun;
 				guf(normal, fun);
 				fun = std::to_string(lambda) + "*(" + fun + ")+";
@@ -250,7 +250,7 @@ public:
 			chain = { element[0],element[2],element[3] };
 			if (onEdge(chain, normal))
 			{
-				file << chain[0] << " " << chain[1] << " " << chain[2] << " " << i << " ";
+				file << chain[0] << " " << chain[1] << " " << chain[2] << " " << i << " " << beta << " ";
 				std::string fun;
 				guf(normal, fun);
 				fun = std::to_string(lambda) + "*(" + fun + ")+";
@@ -265,7 +265,7 @@ public:
 			chain = { element[1],element[2],element[3] };
 			if (onEdge(chain, normal))
 			{
-				file << chain[0] << " " << chain[1] << " " << chain[2] << " " << i << " ";
+				file << chain[0] << " " << chain[1] << " " << chain[2] << " " << i << " " << beta << " ";
 				std::string fun;
 				guf(normal, fun);
 				fun = std::to_string(lambda) + "*(" + fun + ")+";

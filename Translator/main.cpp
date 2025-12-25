@@ -11,9 +11,9 @@ int main()
       std::string outDir = "../test" + std::to_string(i);
       Translator trans(path, outDir);
       trans.setDirih(outDir, u);
-      trans.setNeuman(outDir, gu);
-      //trans.setRobin(outDir, gu, ustr);
+      //trans.setNeuman(outDir, gu);
       trans.setRobinZero();
+      trans.setRobin(outDir, gu, ustr);
       trans.setNodes(outDir, dgu);
       trans.setElements(outDir);
    }
