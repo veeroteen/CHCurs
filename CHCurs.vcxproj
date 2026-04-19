@@ -133,6 +133,7 @@
     <ClInclude Include="CGM.h" />
     <ClInclude Include="CS.h" />
     <ClInclude Include="FEM.h" />
+    <ClInclude Include="Functions.h" />
     <ClInclude Include="Gaus.h" />
     <ClInclude Include="LOS.h" />
     <ClInclude Include="MISC.h" />

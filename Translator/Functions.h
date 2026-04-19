@@ -21,10 +21,6 @@ void gu(std::array<double,3> &normal,std::string &poly)
 	poly = std::to_string(2*a);
 	return;
 }
-double dgu(std::array<double,3> &cords)
-{
-	return 0;
-}
 
 double u2(std::array<double, 3> &cords)
 {

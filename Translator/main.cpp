@@ -11,10 +11,10 @@ int main()
       std::string outDir = "../test" + std::to_string(i);
       Translator trans(path, outDir);
       trans.setDirih(outDir, u);
-      //trans.setNeuman(outDir, gu);
+      trans.setNeuman(outDir, gu);
       trans.setRobinZero();
       trans.setRobin(outDir, gu, ustr);
-      trans.setNodes(outDir, dgu);
+      trans.setNodes(outDir, ustr);
       trans.setElements(outDir);
    }
 }

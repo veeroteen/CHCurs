@@ -61,3 +61,12 @@ void polyToStr(std::string &res,std::vector<T> &poly)
    res += std::string("+" + std::to_string(poly[2]) + "y");
    res += std::string("+" + std::to_string(poly[3]) + "z");
 }
+
+template<Field T>
+void getGradS(std::string &grad,std::vector<T> &poly)
+{
+   grad.clear();
+   grad += std::string(std::to_string(poly[1]));
+   grad += std::string("+" + std::to_string(poly[2]));
+   grad += std::string("+" + std::to_string(poly[3]));
+}

@@ -7,6 +7,7 @@
 #include "CS.h"
 #include <set>
 #include "CGM.h"
+#include "Functions.h"
 template<Field T, ElemType El>
 class FEM
 {
@@ -43,17 +44,14 @@ public:
          elemntsPath = DIR + "/elems.txt",
          fPath = DIR + "/f.txt";
       f = new std::vector<T>(size,0);
-      std::vector<T> fl(size, 0);
+
       conf.close();
       std::ifstream file(fPath);
-      {
-         T val = T();
-         for(size_t i = 0; i < size; i++)
-         {
-            file >> val;
-            fl[i] = val;
-         }
-      }
+
+      std::string fun = "";
+      std::getline(file, fun);
+      StringFun<T> fl(fun);
+
       file.close();
 
       nodes.resize(size);
@@ -155,12 +153,26 @@ public:
          std::vector<T> local(El::GetNodesCount() * (El::GetNodesCount() + 1) / 2 ,0);
          for (size_t i = 0; i < El::GetNodesCount(); i++)
          {
+            std::vector<StringFun<T>> polys;
+            std::string base = "";
+            polyToStr(base, elements[e].basis[i].basis);
+            polys.emplace_back(base);
+
             for (size_t j = 0; j <= i; j++)
             {
-               local[((i * (i + 1)) / 2) + j] += elements[e].scalGrad(i, j) * elements[e].V * elements[e].h;
-               local[((i * (i + 1)) / 2) + j] += gamma * elements[e].V / (i == j ? 10 : 20);
+               polyToStr(base, elements[e].basis[j].basis);
+               polys.emplace_back(base);
+               std::vector<StringFun<T>> grads;
+               std::string base = std::to_string(elements[e].scalGrad(i, j));
+               grads.emplace_back(base);
+               
+               local[((i * (i + 1)) / 2) + j] += elements[e].h * integrate(elements[e], elements[e].vertices, nodes, elements[e].V, grads);
+
+               local[((i * (i + 1)) / 2) + j] += gamma * integrate(elements[e], elements[e].vertices, nodes, elements[e].V, polys);
+               polys.pop_back();
             }
-            fr[elements[e].vertices[i]] += fl[elements[e].vertices[i]] * elements[e].V / 4;
+            polys.push_back(fl);
+            fr[elements[e].vertices[i]] += integrate(elements[e], elements[e].vertices, nodes, elements[e].V, polys);
          }
 
          for(size_t i = 0; i < elements[e].vertices.size(); i++)
@@ -196,7 +208,8 @@ public:
             file >> triangle[0] >> triangle[1] >> triangle[2] >> tetr >> beta;
 
             h = elements[tetr].h;
-            T S = triangleArea(nodes[triangle[0]], nodes[triangle[1]], nodes[triangle[2]]);
+            Triangle<T> triag = elements[tetr].getSubElement(triangle,nodes);
+            T S = triag.S;
             std::string fun;
             std::getline(file, fun);
 
@@ -205,18 +218,21 @@ public:
                std::string bas;
                polyToStr(bas, (elements[tetr].getBasis(triangle[j]))->basis);
                
-               std::vector<std::string> poly = { bas,fun };
+               std::vector<StringFun<T>> poly = { bas,fun };
                fr[triangle[j]] += integrate(elements[tetr], triangle, nodes, S, poly);
-
-               dir[triangle[j]] += beta * S / 6;
-
+               poly.clear();
+               poly.emplace_back(bas);
+               poly.emplace_back(bas);
+               dir[triangle[j]] += beta * integrate(elements[tetr], triangle, nodes, S, poly);
                for (size_t k = 0; k < j; k++)
                {
                   for (size_t it = ilr[triangle[j]]; it < ilr[triangle[j] + 1]; it++)
                   {
                      if (jlr[it] == triangle[k])
                      {
-                        llr[it] += beta * S / 12;
+                        polyToStr(bas, (elements[tetr].getBasis(triangle[k]))->basis);
+                        poly[1] = StringFun<T>(bas);
+                        llr[it] += beta * integrate(elements[tetr], triangle, nodes, S, poly);
                         break;
                      }
                   }
@@ -280,12 +296,13 @@ public:
             std::string fun;
             std::getline(file, fun);
             h = elements[tetr].h;
-            T S = triangleArea(nodes[triangle[0]], nodes[triangle[1]], nodes[triangle[2]]);
+            Triangle<T> triag = elements[tetr].getSubElement(triangle, nodes);
+            T S = triag.S;
             for (size_t j = 0; j < triangle.size(); j++)
             {
                std::string bas;
                polyToStr(bas, (elements[tetr].getBasis(triangle[j]))->basis);
-               std::vector<std::string> poly{ bas , fun };
+               std::vector<StringFun<T>> poly{ bas , fun };
                fr[triangle[j]] += integrate(elements[tetr], triangle, nodes, S, poly);
             }
 

@@ -291,11 +291,14 @@ public:
 	void setNodes(std::string &outDir,F dguf)
 	{
 		std::ofstream f(outDir + "/f.txt");
+		std::string fun;
+		dguf(fun);
+		f << fun << std::endl;
 		std::ofstream file(outDir + "/nodes.txt");
 		for(auto &a : nodes)
 		{
 			file << a[0] << " " << a[1] << " " << a[2] << std::endl;
-			f <<std::setprecision(16) << dguf(a.cords) << std::endl;
+			
 		}
 		file.close();
 		f.close();
