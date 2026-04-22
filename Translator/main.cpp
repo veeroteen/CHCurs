@@ -4,18 +4,18 @@
 #include "Functions.h"
 int main()
 {
-   for (size_t i = 1; i <= 1; i++)
-   {
-      std::string path = "tetr" + std::to_string(i) + ".msh";
 
-      std::string outDir = "../test" + std::to_string(i);
+      std::string path = "tetr" + std::to_string(1) + ".msh";
+
+      std::string outDir = "../test" + std::to_string(2);
       Translator trans(path, outDir);
       trans.setDirih(outDir, u);
-      trans.setNeuman(outDir, gu);
+      trans.setNeumanZero();
+      //trans.setNeuman(outDir, gu);
       trans.setRobinZero();
-      trans.setRobin(outDir, gu, ustr);
+      //trans.setRobin(outDir, gu, ustr);
       trans.setNodes(outDir, ustr);
       trans.setElements(outDir);
-   }
+   
 }
 

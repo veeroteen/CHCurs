@@ -7,40 +7,6 @@
 #include <iomanip>
 #include "MISC.h"
 
-template <Field T>
-T scalar(const std::vector<T> &a, const std::vector<T> b)
-{
-	T res = T();
-
-	for (size_t i = 0; i < a.size(); i++)
-	{
-		res += a[i] * b[i];
-	}
-	return res;
-
-}
-
-template <Field T>
-void diff(std::vector<T> &a, std::vector<T> &b,std::vector<T> &res)
-{
-	for(size_t i = 0; i < a.size();i++)
-	{
-		res[i] = a[i] - b[i];
-	}
-}
-
-
-template <Field T>
-void Vdiff(std::vector<T> &a, std::vector<T> &b, std::vector<T> &res)
-{
-	res.resize(a.size());
-	for (size_t i = 0; i < a.size(); i++)
-	{
-		res[i] = a[i] - b[i];
-	}
-
-}
-
 
 template <Field T>
 struct CMatrix
@@ -752,6 +718,12 @@ public:
 		{
 			std::cout << std::setprecision(16) << a << std::endl;
 		}
+	}
+
+	const std::vector<T>& getX()
+	{
+		
+		return *x;
 	}
 };
 

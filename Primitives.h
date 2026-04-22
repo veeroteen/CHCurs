@@ -9,14 +9,17 @@
 template <Field T,size_t n>
 struct Node
 {
+public:
+   std::vector<T>::iterator u;
+
    std::array<T, n> node;
+   
    Node() = default;
    template<std::input_iterator It>
-   Node(It begin)
+   Node(It begin, std::vector<T>::iterator u) : u(u)
    {
       std::copy_n(begin, n, node.begin());
    }
-
    T&  operator [](size_t i) 
    {
       return node[i];
@@ -29,9 +32,12 @@ struct Elem
 {
 protected:
    Elem() = default;
-   Elem(T h) : h(h) {}
+   Elem(const std::string &h) 
+   {
+      this->h = StringFun<T>(h);
+   }
 public:
-   T h;
+   StringFun<T> h;
 };
 
 
@@ -79,12 +85,12 @@ public:
    Triangle() = default;
 
    template<std::input_iterator It>
-   Triangle(It it, T h, std::vector<Node<T, 3>> &nodes) : Elem<T>(h)
+   Triangle(It it, const std::string h, std::vector<Node<T, 3>> &nodes) : Elem<T>(h)
    {
       std::copy_n(it, vertices.size(), vertices.begin());
       S = Square(nodes);
    }
-   Triangle(std::array<size_t, 3> &triangle, T h, std::array<Basis<T>, 3> &basis , std::vector<Node<T, 3>> &nodes) : Elem<T>(h), basis(basis), vertices(triangle)
+   Triangle(std::array<size_t, 3> &triangle, const std::string h, std::array<Basis<T>, 3> &basis , std::vector<Node<T, 3>> &nodes) : Elem<T>(h), basis(basis), vertices(triangle)
    {
       S = Square(nodes[vertices[0]], nodes[vertices[1]], nodes[vertices[2]]);
    }
@@ -171,12 +177,12 @@ public:
             }
          }
       }
-      Triangle<T> triag(triangle, h, Tbasis, nodes);
+      Triangle<T> triag(triangle, h.getStringFun(), Tbasis, nodes);
       return triag;
    }
 
    template<std::input_iterator It>
-   Tetrahedron(It it, T h, std::vector<Node<T, 3>> &nodes) : Elem<T>(h)
+   Tetrahedron(It it, const std::string h, std::vector<Node<T, 3>> &nodes) : Elem<T>(h)
    {
       std::copy_n(it, vertices.size(), vertices.begin());
       V = Volume(nodes);
@@ -282,12 +288,14 @@ T integrate(const El &element,const std::array<size_t,3> &triangle, std::vector<
       T l3 = eta[i];
       T l1 = 1 - l2 - l3;
       std::map<std::string, T> map;
+      T x, y, z;
+
       map["x"] = l1 * nodes[triangle[0]][0] + l2 * nodes[triangle[1]][0] + l3 * nodes[triangle[2]][0];
       map["y"] = l1 * nodes[triangle[0]][1] + l2 * nodes[triangle[1]][1] + l3 * nodes[triangle[2]][1];
       map["z"] = l1 * nodes[triangle[0]][2] + l2 * nodes[triangle[1]][2] + l3 * nodes[triangle[2]][2];
-      
-      T g = T(1);
+      map["u"] = l1 * (*nodes[triangle[0]].u) + l2 * (*nodes[triangle[1]].u) + l3 * (*nodes[triangle[2]].u);
 
+      T g = T(1);
       for(auto &a : polys)
       {
          auto ttm = a.evaluate(map);
@@ -303,8 +311,8 @@ T integrate(const El &element,const std::array<size_t,3> &triangle, std::vector<
 template <Field T, ElemType El>
 T integrate(const El &element, const std::array<size_t, 4> &tetr, std::vector<Node<T, El::GetDim()>> &nodes, const T &V, std::vector<StringFun<T>> &polys)
 {
-   constexpr T a = 0.5854101966249685;
-   constexpr T b = 0.1381966011250105;
+   constexpr T a = 0.58541019662496852;
+   constexpr T b = 0.13819660112501050;
 
    constexpr std::array<std::array<T, 3>, 4> pts = { {
       {b, b, b},
@@ -343,7 +351,11 @@ T integrate(const El &element, const std::array<size_t, 4> &tetr, std::vector<No
          l2 * nodes[tetr[1]][2] +
          l3 * nodes[tetr[2]][2] +
          l4 * nodes[tetr[3]][2];
-
+      map["u"] =
+         l1 * (*nodes[tetr[0]].u) +
+         l2 * (*nodes[tetr[1]].u) +
+         l3 * (*nodes[tetr[2]].u) +
+         l4 * (*nodes[tetr[3]].u);
       T g = T(1);
 
       for (auto &a : polys)

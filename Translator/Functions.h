@@ -2,14 +2,14 @@
 #include <array>
 #include <string>
 #include <vector>
-double u(std::array<double,3> &cords)
+double u(std::array<double,4> &cords)
 {
-	return cords[0] + cords[1] + cords[2];
+	return cords[0] +cords[1] + cords[2];
 
 }
 void ustr(std::string &fun)
 {
-	fun = "x + y + z";
+	fun = "0";
 }
 
 void gu(std::array<double,3> &normal,std::string &poly)
@@ -22,7 +22,7 @@ void gu(std::array<double,3> &normal,std::string &poly)
 	return;
 }
 
-double u2(std::array<double, 3> &cords)
+double u2(std::array<double, 4> &cords)
 {
 	return cords[0]* cords[0] + cords[1]* cords[1] + cords[2]* cords[2];
 
@@ -48,12 +48,12 @@ void gu2(std::array<double, 3> &normal, std::string &poly)
 	}
 }
 
-double dgu2(std::array<double, 3> &cords)
+double dgu2(std::array<double, 4> &cords)
 {
 	return -6;
 }
 
-double usin(std::array<double, 3> &cords)
+double usin(std::array<double, 4> &cords)
 {
 	return sin(cords[0] + cords[1] + cords[2]);
 
@@ -80,12 +80,12 @@ void gusin(std::array<double, 3> &normal, std::string &poly)
 
 	return;
 }
-double dgusin(std::array<double, 3> &cords)
+double dgusin(std::array<double, 4> &cords)
 {
 	return 3*sin(cords[0] + cords[1] + cords[2]);
 }
 
-double u3(std::array<double, 3> &cords)
+double u3(std::array<double, 4> &cords)
 {
 	return cords[0] * cords[0]* cords[0] + cords[1]* cords[1] * cords[1] + cords[2] * cords[2]* cords[2];
 
@@ -111,7 +111,7 @@ void gu3(std::array<double, 3> &normal, std::string &poly)
 	}
 }
 
-double dgu3(std::array<double, 3> &cords)
+double dgu3(std::array<double, 4> &cords)
 {
 	return -6*(cords[0] + cords[1] + cords[2]);
 }

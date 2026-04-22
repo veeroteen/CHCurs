@@ -8,7 +8,7 @@
 #include "Functions.h"
 struct Node
 {
-	std::array<double,3> cords;
+	std::array<double,4> cords;
 
 	double& operator[] (size_t i)
 	{
@@ -20,6 +20,7 @@ struct Node
 		cords[0] = x;
 		cords[1] = y;
 		cords[2] = z;
+		cords[3] = x+y+z;
 	}
 
 	bool operator== (Node &a)
@@ -137,12 +138,38 @@ public:
 		std::ofstream out(outDir + "/dirih.txt");
 		for(size_t i = 0; i < nodes.size();i++)
 		{
-			if(nodes[i][2] == 0)
+			if (nodes[i][0] == 0)
+			{
+				out << i << " " << std::setprecision(16) << f(nodes[i].cords) << std::endl;
+				count++;
+				}
+			else if (nodes[i][0] == 0.5)
+			{
+				out << i << " " << std::setprecision(16) << f(nodes[i].cords) << std::endl;
+				count++;
+			}
+			else if (nodes[i][1] == 0)
+			{
+				out << i << " " << std::setprecision(16) << f(nodes[i].cords) << std::endl;
+				count++;
+				}
+			else if (nodes[i][1] == 0.5)
+			{
+				out << i << " " << std::setprecision(16) << f(nodes[i].cords) << std::endl;
+				count++;
+			}
+			else if(nodes[i][2] == 0)
+			{
+				out << i << " " << std::setprecision(16) << f(nodes[i].cords) << std::endl;
+				count++;
+			}
+			else if (nodes[i][2] == 0.5)
 			{
 				out << i << " " << std::setprecision(16) << f(nodes[i].cords) << std::endl;
 				count++;
 			}
 		}
+
 		out.close();
 		config << count << std::endl;
 	}
@@ -206,6 +233,10 @@ public:
 		}
 		file.close();
 		config << count << std::endl;
+	}
+	void setNeumanZero()
+	{
+		config << 0 << std::endl;
 	}
 	template <typename F, typename Fs>
 	void setRobin(std::string &outDir, F guf,Fs uStr)
@@ -297,7 +328,7 @@ public:
 		std::ofstream file(outDir + "/nodes.txt");
 		for(auto &a : nodes)
 		{
-			file << a[0] << " " << a[1] << " " << a[2] << std::endl;
+			file << a[0] << "\t" << a[1] << "\t" << a[2] << "\t" << 1 << std::endl;
 			
 		}
 		file.close();
@@ -308,7 +339,7 @@ public:
 		std::ofstream file(outDir + "/elems.txt");
 		for(auto &a : elems)
 		{
-			file << a[0] << " " << a[1] << " " << a[2] << " " << a[3] << " " << 2 << std::endl;
+			file << a[0] << " " << a[1] << " " << a[2] << " " << a[3] << " " << "u*u" << std::endl;
 		
 		}
 		file.close();

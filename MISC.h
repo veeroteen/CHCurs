@@ -38,6 +38,27 @@ T calcPoly(const std::vector<double> &poly, T x, T y, T z)
    return res;
 }
 
+template <Field T>
+T scalar(const std::vector<T> &a, const std::vector<T> &b)
+{
+   T res = T();
+
+   for (size_t i = 0; i < a.size(); i++)
+   {
+      res += a[i] * b[i];
+   }
+   return res;
+
+}
+
+template <Field T>
+void diff(std::vector<T> &a, std::vector<T> &b, std::vector<T> &res)
+{
+   for (size_t i = 0; i < a.size(); i++)
+   {
+      res[i] = a[i] - b[i];
+   }
+}
 
 template<Field T>
 T pow(T a, unsigned b)
@@ -70,3 +91,16 @@ void getGradS(std::string &grad,std::vector<T> &poly)
    grad += std::string("+" + std::to_string(poly[2]));
    grad += std::string("+" + std::to_string(poly[3]));
 }
+
+template<Field T>
+T mod(const std::vector<T> &a,const std::vector<T> &b)
+{
+   std::vector<T> temp(a);
+   for(size_t i = 0; i < a.size(); i++)
+   {
+      temp[i] -= b[i];
+   }
+   return sqrt(scalar(temp, temp));
+
+}
+

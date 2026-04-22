@@ -39,10 +39,11 @@ class StringFun : public Fun<T>
    exprtk::expression<T> expression;
    std::map<std::string, T> variables;
 public:
-   StringFun(std::string &fun)
+   StringFun(const std::string &fun)
    {
       _fun = fun;
    }
+   StringFun() = default;
    T evaluate(const std::map<std::string, T> &args) override
    { 
       if(compiled)
@@ -81,4 +82,8 @@ public:
       evaluate(map);
    }
 
+   std::string& getStringFun()
+   {
+      return _fun;
+   }
 };
