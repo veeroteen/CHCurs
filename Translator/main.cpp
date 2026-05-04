@@ -12,9 +12,9 @@ int main()
       trans.setDirih(outDir, u);
       trans.setNeumanZero();
       //trans.setNeuman(outDir, gu);
-      trans.setRobinZero();
-      //trans.setRobin(outDir, gu, ustr);
-      trans.setNodes(outDir, ustr);
+      //trans.setRobinZero();
+      trans.setRobin(outDir, gu, ustr);
+      trans.setNodes(outDir, fu);
       trans.setElements(outDir);
    
 }

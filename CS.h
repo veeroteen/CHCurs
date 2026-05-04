@@ -13,12 +13,14 @@ struct CMatrix
 {
 	std::vector<T> *ll, *lu, *di;
 	std::vector<size_t> *il, *jl, *iu, *ju;
-	CMatrix(std::vector<size_t> *il, std::vector<size_t> *jl, std::vector<size_t> *iu, std::vector<size_t> *ju, std::vector<T> *ll, std::vector<T> *lu, std::vector<T> *di) :
-		il(il), jl(jl), iu(iu), ju(ju), ll(ll), lu(lu), di(di)
+	bool owner = false;
+	bool symmetry = false;
+	CMatrix(std::vector<size_t> *il, std::vector<size_t> *jl, std::vector<size_t> *iu, std::vector<size_t> *ju, std::vector<T> *ll, std::vector<T> *lu, std::vector<T> *di, bool symmetry) :
+		il(il), jl(jl), iu(iu), ju(ju), ll(ll), lu(lu), di(di), symmetry(symmetry) {};
+
+	void load(std::vector<size_t> *_il, std::vector<size_t> *_jl, std::vector<size_t> *_iu, std::vector<size_t> *_ju, std::vector<T> *_ll, std::vector<T> *_lu, std::vector<T> *_di, bool _symmetry)
 	{
-	}
-	void load(std::vector<size_t> *_il, std::vector<size_t> *_jl, std::vector<size_t> *_iu, std::vector<size_t> *_ju, std::vector<T> *_ll, std::vector<T> *_lu, std::vector<T> *_di)
-	{
+		symmetry = _symmetry;
 		il = _il;
 		jl = _jl;
 		iu = _iu;
@@ -29,6 +31,7 @@ struct CMatrix
 	}
 	CMatrix()
 	{
+		owner = true;
 		il = new std::vector<size_t>();
 		jl = new std::vector<size_t>();
 		iu = new std::vector<size_t>();
@@ -39,27 +42,227 @@ struct CMatrix
 	}
 	~CMatrix()
 	{
-		if (il != nullptr)
+		if (owner)
 		{
-			delete il;
-		}
-		if (jl != nullptr)
-		{
-			delete jl;
-		}
-		if (ll != nullptr)
-		{
-			delete ll;
-		}
-		if (lu != nullptr)
-		{
-			delete lu;
-		}
-		if (di != nullptr)
-		{
-			delete di;
+			if (il != nullptr)
+			{
+				delete il;
+			}
+			if (jl != nullptr)
+			{
+				delete jl;
+			}
+			if (ll != nullptr)
+			{
+				delete ll;
+			}
+			if (lu != nullptr)
+			{
+				delete lu;
+			}
+			if (di != nullptr)
+			{
+				delete di;
+			}
 		}
 	}
+	void forwSolutionCSR(std::vector<size_t> &ia, std::vector<size_t> &ja, std::vector<T> &f, std::vector<T> &x, std::vector<T> &al, bool loverD = true)
+	{
+		if (symmetry)
+		{
+			for (size_t i = 0; i < f.size(); i++)
+			{
+				T buff = T();
+				for (size_t k = (ia)[i]; k < (ia)[i + 1]; k++)
+				{
+					buff += al[k] * x[(ja)[k]];
+
+				}
+				x[i] = (f[i] - buff) / (*di)[i];
+
+			}
+		}
+		else
+		{
+			for (size_t i = 0; i < f.size(); i++)
+			{
+				T buff = T();
+				for (size_t k = ia[i]; k < ia[i + 1]; k++)
+				{
+					buff += al[k] * x[ja[k]];
+
+				}
+				x[i] = (f[i] - buff) / (loverD ? 1 : (*di)[i]);
+
+			}
+		}
+
+	}
+	void revrsSolutionCSC(std::vector<size_t> &ia, std::vector<size_t> &ja, std::vector<T> &f, std::vector<T> &x, std::vector<T> &lu, bool loverD = true)
+	{
+		if (symmetry)
+		{
+			for (size_t i = 0; i < x.size(); i++)
+			{
+				x[i] = f[i] / (*di)[i];
+
+			}
+			for (size_t j = f.size() - 1; j < f.size(); j--)
+			{
+
+				for (size_t k = (ia)[j]; k < (ia)[j + 1]; k++)
+				{
+					x[ja[k]] -= lu[k] * x[j] / (*di)[ja[k]];
+
+				}
+
+			}
+		}
+		else
+		{
+			for (size_t i = 0; i < x.size(); i++)
+			{
+				x[i] = f[i] / (loverD ? 1 : (*di)[i]);
+
+			}
+			for (size_t j = f.size() - 1; j < f.size(); j--)
+			{
+				for (size_t k = (ia)[j]; k < (ia)[j + 1]; k++)
+				{
+					x[ja[k]] -= lu[k] * x[j] / (loverD ? 1 : (*di)[ja[k]]);
+
+				}
+
+			}
+
+		}
+	}
+	void diagMult(std::vector<T> &diag, std::vector<T> &f, std::vector<T> &x)
+	{
+		for (size_t i = 0; i < diag.size(); i++)
+		{
+			x[i] = f[i] * diag[i];
+		}
+	}
+	void diagSolve(std::vector<T> &diag, std::vector<T> &f, std::vector<T> &x)
+	{
+		for (size_t i = 0; i < diag.size(); i++)
+		{
+			x[i] = f[i] / diag[i];
+		}
+	}
+	void multiplyA(std::vector<T> &x)
+	{
+		if (symmetry)
+		{
+			std::vector<T> tx(x.size(), 0);
+			for (size_t i = 0; i < x.size(); i++)
+			{
+				tx[i] += (*di)[i] * x[i];
+				for (size_t k = (*il)[i]; k < (*il)[i + 1]; ++k)
+				{
+					tx[i] += (*ll)[k] * x[(*jl)[k]];
+				}
+			}
+			for (int j = 0; j < x.size(); ++j)
+			{
+				for (int k = (*il)[j]; k < (*il)[j + 1]; ++k)
+				{
+					tx[(*jl)[k]] += (*ll)[k] * x[j];
+				}
+			}
+			x = tx;
+		}
+		else
+		{
+			std::vector<T> tx(x);
+			x.clear();
+			x.resize(tx.size());
+			for (size_t i = 0; i < x.size(); i++)
+			{
+				x[i] += (*di)[i] * tx[i];
+				for (size_t k = (*il)[i]; k < (*il)[i + 1]; k++)
+				{
+					x[i] += (*ll)[k] * tx[(*jl)[k]];
+				}
+
+				for (size_t k = (*iu)[i]; k < (*iu)[i + 1]; ++k)
+				{
+					x[(*ju)[k]] += (*lu)[k] * tx[i];
+				}
+
+			}
+		}
+	}
+	void multiplyA(const std::vector<T> &x, std::vector<T> &res)
+	{
+		res.clear();
+		res.resize(x.size());
+		if (symmetry)
+		{
+			for (size_t i = 0; i < x.size(); i++)
+			{
+				res[i] += (*di)[i] * x[i];
+				for (size_t k = (*il)[i]; k < (*il)[i + 1]; ++k)
+				{
+					res[i] += (*ll)[k] * x[(*jl)[k]];
+				}
+			}
+			for (int j = 0; j < x.size(); ++j)
+			{
+				for (int k = (*il)[j]; k < (*il)[j + 1]; ++k)
+				{
+					res[(*jl)[k]] += (*ll)[k] * x[j];
+				}
+			}
+		}
+		else
+		{
+
+			for (size_t i = 0; i < x.size(); i++)
+			{
+				res[i] += (*di)[i] * x[i];
+				for (size_t k = (*il)[i]; k < (*il)[i + 1]; k++)
+				{
+					res[i] += (*ll)[k] * x[(*jl)[k]];
+				}
+
+				for (size_t k = (*iu)[i]; k < (*iu)[i + 1]; ++k)
+				{
+					res[(*ju)[k]] += (*lu)[k] * x[i];
+				}
+
+			}
+		}
+	}
+	void multiplyAT(std::vector<T> &x)
+	{
+		if (symmetry)
+		{
+			multiplyA(x);
+		}
+		else
+		{
+			std::vector<T> tx(x.size(), 0);
+			for (size_t i = 0; i < x.size(); i++)
+			{
+				tx[i] += (*di)[i] * x[i];
+
+				for (size_t k = (*il)[i]; k < (*il)[i + 1]; k++)
+				{
+					tx[(*jl)[k]] += (*ll)[k] * x[i];
+				}
+
+				for (size_t k = (*iu)[i]; k < (*iu)[i + 1]; ++k)
+				{
+					tx[i] += (*lu)[k] * x[(*ju)[k]];
+				}
+
+			}
+			x = tx;
+		}
+	}
+
 };
 
 
@@ -79,14 +282,14 @@ protected:
 
 	ThreeStageBase(std::vector<size_t> *il, std::vector<size_t> *jl, std::vector<size_t> *iu, std::vector<size_t> *ju, std::vector<T> *ll, std::vector<T> *lu, std::vector<T> *di, std::vector<T> *f)
 	{
-		if(ju != nullptr)
+		if(lu != nullptr)
 		{
 			symmetry = false;
 		}
-		matrix.load(il, jl, iu, ju, ll, lu, di);
+		matrix.load(il, jl, iu, ju, ll, lu, di,symmetry);
 		this->f = f;
 		x = new std::vector<T>(f->size(), 0);
-		A = new CMatrix<T>(matrix.il, matrix.jl, nullptr, nullptr, matrix.ll, nullptr, matrix.di);
+		A = new CMatrix<T>(matrix.il, matrix.jl, matrix.iu, matrix.ju, matrix.ll, matrix.lu, matrix.di,symmetry);
 		eps = 1E-30;
 		iterC = 10000;
 	}
@@ -291,95 +494,6 @@ protected:
 		iterC = 10000;
 	}
 
-	void forwSolutionCSR(std::vector<size_t> &ia, std::vector<size_t> &ja, std::vector<T> &f, std::vector<T> &x, std::vector<T> &al, bool loverD = true)
-	{
-		if (symmetry)
-		{
-			for (size_t i = 0; i < f.size(); i++)
-			{
-				T buff = T();
-				for (size_t k = (ia)[i]; k < (ia)[i + 1]; k++)
-				{
-					buff += al[k] * x[(ja)[k]];
-					
-				}
-				x[i] = (f[i] - buff) / (*matrix.di)[i];
-
-			}
-		}
-		else
-		{
-			for (size_t i = 0; i < f.size(); i++)
-			{
-				T buff = T();
-				for (size_t k = ia[i]; k < ia[i + 1]; k++)
-				{
-					buff += al[k] * x[ja[k]];
-
-				}
-				x[i] = (f[i] - buff) / (loverD ? 1 : (*matrix.di)[i]);
-
-			}
-		}
-
-	}
-	void revrsSolutionCSC(std::vector<size_t> &ia, std::vector<size_t> &ja, std::vector<T> &f, std::vector<T> &x, std::vector<T> &lu, bool loverD = true)
-	{
-		if (symmetry)
-		{
-			for (size_t i = 0; i < x.size(); i++)
-			{
-				x[i] = f[i] / (*matrix.di)[i];
-
-			}
-			for (size_t j = f.size() - 1; j < f.size(); j--)
-			{
-
-				for (size_t k = (ia)[j]; k < (ia)[j + 1]; k++)
-				{
-					x[ja[k]] -= lu[k] * x[j] / (*matrix.di)[ja[k]];
-
-				}
-
-			}
-		}
-		else
-		{
-			for (size_t i = 0; i < x.size(); i++)
-			{
-				x[i] = f[i] / (loverD ? 1 : (*matrix.di)[i]);
-
-			}
-			for (size_t j = f.size() - 1; j < f.size(); j--)
-			{
-				for (size_t k = (ia)[j]; k < (ia)[j + 1]; k++)
-				{
-					x[ja[k]] -= lu[k] * x[j] / (loverD ? 1 : (*matrix.di)[ja[k]]);
-
-				}
-
-			}
-
-		}
-	}
-	
-
-
-	void diagMult(std::vector<T> &diag, std::vector<T> &f, std::vector<T> &x)
-	{
-		for (size_t i = 0; i < diag.size(); i++)
-		{
-			x[i] = f[i] * diag[i];
-		}
-	}
-	void diagSolve(std::vector<T> &diag, std::vector<T> &f, std::vector<T> &x)
-	{
-		for (size_t i = 0; i < diag.size(); i++)
-		{
-			x[i] = f[i] / diag[i];
-		}
-	}
-
 	void incompLU()
 	{
 
@@ -498,118 +612,7 @@ protected:
 
 		}
 	}
-	void multiplyA(std::vector<T> &x)
-	{
-		if (symmetry)
-		{
-			std::vector<T> tx(x.size(), 0);
-			for (size_t i = 0; i < x.size(); i++)
-			{
-				tx[i] += (*A->di)[i] * x[i];
-				for (size_t k = (*A->il)[i]; k < (*A->il)[i + 1]; ++k)
-				{
-					tx[i] += (*A->ll)[k] * x[(*A->jl)[k]];
-				}
-			}
-			for (int j = 0; j < x.size(); ++j)
-			{
-				for (int k = (*A->il)[j]; k < (*A->il)[j + 1]; ++k)
-				{
-					tx[(*A->jl)[k]] += (*A->ll)[k] * x[j];
-				}
-			}
-			x = tx;
-		}
-		else
-		{
-			std::vector<T> tx(x);
-			x.clear();
-			x.resize(tx.size());
-			for (size_t i = 0; i < x.size(); i++)
-			{
-				x[i] += (*A->di)[i] * tx[i];
-				for (size_t k = (*A->il)[i]; k < (*A->il)[i + 1]; k++)
-				{
-					x[i] += (*A->ll)[k] * tx[(*A->jl)[k]];
-				}
 
-				for (size_t k = (*A->iu)[i]; k < (*A->iu)[i + 1]; ++k)
-				{
-					x[(*A->ju)[k]] += (*A->lu)[k] * tx[i];
-				}
-
-			}
-		}
-	}
-	void multiplyA(const std::vector<T> &x, std::vector<T> &res)
-	{
-		res.clear();
-		res.resize(x.size());
-		if (symmetry)
-		{
-			for (size_t i = 0; i < x.size(); i++)
-			{
-				res[i] += (*A->di)[i] * x[i];
-				for (size_t k = (*A->il)[i]; k < (*A->il)[i + 1]; ++k)
-				{
-					res[i] += (*A->ll)[k] * x[(*A->jl)[k]];
-				}
-			}
-			for (int j = 0; j < x.size(); ++j)
-			{
-				for (int k = (*A->il)[j]; k < (*A->il)[j + 1]; ++k)
-				{
-					res[(*A->jl)[k]] += (*A->ll)[k] * x[j];
-				}
-			}
-		}
-		else
-		{
-
-			for (size_t i = 0; i < x.size(); i++)
-			{
-				res[i] += (*A->di)[i] * x[i];
-				for (size_t k = (*A->il)[i]; k < (*A->il)[i + 1]; k++)
-				{
-					res[i] += (*A->ll)[k] * x[(*A->jl)[k]];
-				}
-
-				for (size_t k = (*A->iu)[i]; k < (*A->iu)[i + 1]; ++k)
-				{
-					res[(*A->ju)[k]] += (*A->lu)[k] * x[i];
-				}
-
-			}
-		}
-	}
-	void multiplyAT(std::vector<T> &x)
-	{
-
-		if (symmetry)
-		{
-			multiplyA(x);
-		}
-		else
-		{
-			std::vector<T> tx(x.size(), 0);
-			for (size_t i = 0; i < x.size(); i++)
-			{
-				tx[i] += (*A->di)[i] * x[i];
-
-				for (size_t k = (*A->il)[i]; k < (*A->il)[i + 1]; k++)
-				{
-					tx[(*A->jl)[k]] += (*A->ll)[k] * x[i];
-				}
-
-				for (size_t k = (*matrix.iu)[i]; k < (*matrix.iu)[i + 1]; ++k)
-				{
-					tx[i] += (*A->lu)[k] * x[(*A->ju)[k]];
-				}
-
-			}
-			x = tx;
-		}
-	}
 
 public:
 	void setF()

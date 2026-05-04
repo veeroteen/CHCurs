@@ -79,7 +79,7 @@ public:
       map["x"] = node[0];
       map["y"] = node[1];
       map["z"] = node[2];
-      evaluate(map);
+      return evaluate(map);
    }
 
    std::string& getStringFun()

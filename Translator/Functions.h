@@ -9,7 +9,11 @@ double u(std::array<double,4> &cords)
 }
 void ustr(std::string &fun)
 {
-	fun = "0";
+	fun = "x+y+z";
+}
+void fu(std::string &fun)
+{
+	fun = "-3";
 }
 
 void gu(std::array<double,3> &normal,std::string &poly)
@@ -18,7 +22,7 @@ void gu(std::array<double,3> &normal,std::string &poly)
 	a += normal[0] * 1;
 	a += normal[1] * 1;
 	a += normal[2] * 1;
-	poly = std::to_string(2*a);
+	poly = std::to_string(a);
 	return;
 }
 

@@ -52,7 +52,7 @@ class Translator
 {
 	std::vector<Node> nodes;
 	std::vector<Elems> elems;
-	double lambda = 1;
+	std::string lambda = "u";
 	double beta = 1;
 	std::ofstream config;
 	bool onEdge(std::array<size_t,3> &heads,std::array<double,3> &normal)
@@ -137,7 +137,14 @@ public:
 		size_t count = 0;
 		std::ofstream out(outDir + "/dirih.txt");
 		for(size_t i = 0; i < nodes.size();i++)
-		{
+		{			
+			
+			if (nodes[i][2] == 0)
+			{
+				out << i << " " << std::setprecision(16) << f(nodes[i].cords) << std::endl;
+				count++;
+			}
+			/*
 			if (nodes[i][0] == 0)
 			{
 				out << i << " " << std::setprecision(16) << f(nodes[i].cords) << std::endl;
@@ -152,7 +159,7 @@ public:
 			{
 				out << i << " " << std::setprecision(16) << f(nodes[i].cords) << std::endl;
 				count++;
-				}
+			}
 			else if (nodes[i][1] == 0.5)
 			{
 				out << i << " " << std::setprecision(16) << f(nodes[i].cords) << std::endl;
@@ -168,6 +175,7 @@ public:
 				out << i << " " << std::setprecision(16) << f(nodes[i].cords) << std::endl;
 				count++;
 			}
+			*/
 		}
 
 		out.close();
@@ -189,7 +197,7 @@ public:
 				file << chain[0] << " " << chain[1] << " " << chain[2] << " " << i << " ";
 				std::string fun;
 				guf(normal,fun);
-				fun = std::to_string(lambda) + "*(" + fun + ")";
+				fun = lambda + "*(" + fun + ")";
 				file << fun;
 				file << std::endl;
 				count++;
@@ -201,7 +209,7 @@ public:
 				file << chain[0] << " " << chain[1] << " " << chain[2] << " " << i << " ";
 				std::string fun;
 				guf(normal, fun);
-				fun = std::to_string(lambda) + "*(" + fun + ")";
+				fun = lambda + "*(" + fun + ")";
 				file << fun;
 				file << std::endl;
 				count++;
@@ -213,7 +221,7 @@ public:
 				file << chain[0] << " " << chain[1] << " " << chain[2] << " " << i << " ";
 				std::string fun;
 				guf(normal, fun);
-				fun = std::to_string(lambda) + "*(" + fun + ")";
+				fun = lambda + "*(" + fun + ")";
 				file << fun;
 				file << std::endl;
 				count++;
@@ -225,7 +233,7 @@ public:
 				file << chain[0] << " " << chain[1] << " " << chain[2] << " " << i << " ";
 				std::string fun;
 				guf(normal, fun);
-				fun = std::to_string(lambda) + "*(" + fun + ")";
+				fun = lambda + "*(" + fun + ")";
 				file << fun;
 				file << std::endl;
 				count++;
@@ -254,10 +262,10 @@ public:
 				file << chain[0] << " " << chain[1] << " " << chain[2] << " " << i << " " << beta << " ";
 				std::string fun;
 				guf(normal, fun);
-				fun = std::to_string(lambda) + "*(" + fun + ")+";
+				fun = lambda + "*(" + fun + ")";
 				file << fun;
 				uStr(fun);
-				fun = std::to_string(beta) + "*(" + fun + ")";
+				fun = "+" + std::to_string(beta) + "*(" + fun + ")";
 				file << fun;
 				file << std::endl;
 				count++;
@@ -269,10 +277,10 @@ public:
 				file << chain[0] << " " << chain[1] << " " << chain[2] << " " << i << " " << beta  << " ";
 				std::string fun;
 				guf(normal, fun);
-				fun = std::to_string(lambda) + "*(" + fun + ")+";
+				fun = lambda + "*(" + fun + ")";
 				file << fun;
 				uStr(fun);
-				fun = std::to_string(beta) + "*(" + fun + ")";
+				fun = "+" + std::to_string(beta) + "*(" + fun + ")";
 				file << fun;
 				file << std::endl;
 				count++;
@@ -284,10 +292,10 @@ public:
 				file << chain[0] << " " << chain[1] << " " << chain[2] << " " << i << " " << beta << " ";
 				std::string fun;
 				guf(normal, fun);
-				fun = std::to_string(lambda) + "*(" + fun + ")+";
+				fun = lambda + "*(" + fun + ")";
 				file << fun;
 				uStr(fun);
-				fun = std::to_string(beta) + "*(" + fun + ")";
+				fun = "+" + std::to_string(beta) + "*(" + fun + ")";
 				file << fun;
 				file << std::endl;
 				count++;
@@ -299,10 +307,10 @@ public:
 				file << chain[0] << " " << chain[1] << " " << chain[2] << " " << i << " " << beta << " ";
 				std::string fun;
 				guf(normal, fun);
-				fun = std::to_string(lambda) + "*(" + fun + ")+";
+				fun = lambda + "*(" + fun + ")";
 				file << fun;
 				uStr(fun);
-				fun = std::to_string(beta) + "*(" + fun + ")";
+				fun = "+" + std::to_string(beta) + "*(" + fun + ")";
 				file << fun;
 				file << std::endl;
 				count++;
@@ -319,11 +327,11 @@ public:
 
 
 	template <typename F>
-	void setNodes(std::string &outDir,F dguf)
+	void setNodes(std::string &outDir,F laplas)
 	{
 		std::ofstream f(outDir + "/f.txt");
 		std::string fun;
-		dguf(fun);
+		laplas(fun);
 		f << fun << std::endl;
 		std::ofstream file(outDir + "/nodes.txt");
 		for(auto &a : nodes)
@@ -339,7 +347,7 @@ public:
 		std::ofstream file(outDir + "/elems.txt");
 		for(auto &a : elems)
 		{
-			file << a[0] << " " << a[1] << " " << a[2] << " " << a[3] << " " << "u*u" << std::endl;
+			file << a[0] << " " << a[1] << " " << a[2] << " " << a[3] << " " << "u" << std::endl;
 		
 		}
 		file.close();

@@ -8,17 +8,11 @@ class CGM : public ThreeStageBase<T>
 	using ThreeStageBase<T>::f;
 	using ThreeStageBase<T>::x;
 	using ThreeStageBase<T>::symmetry;
-	using ThreeStageBase<T>::forwSolutionCSR;
-	using ThreeStageBase<T>::diagMult;
-	using ThreeStageBase<T>::revrsSolutionCSC;
 	using ThreeStageBase<T>::A;
 	using ThreeStageBase<T>::incompLU;
 	using ThreeStageBase<T>::incompChol;
-	using ThreeStageBase<T>::diagSolve;
 	using ThreeStageBase<T>::eps;
 	using ThreeStageBase<T>::iterC;
-	using ThreeStageBase<T>::multiplyA;
-	using ThreeStageBase<T>::multiplyAT;
 
 private:
 
@@ -26,7 +20,7 @@ private:
 	void iterationSym(std::vector<T> &r, std::vector<T> &p, std::vector<T> &z, CMatrix<T> &M)
 	{
 		std::vector<T> temp(z);
-		multiplyA(temp); // Az_k-1
+		A->multiplyA(temp); // Az_k-1
 
 		T b = scalar(p, r);
 		T a = b / scalar(temp, z);
@@ -37,8 +31,8 @@ private:
 			r[i] = r[i] - a * temp[i];
 		}
 
-		forwSolutionCSR(*M.il, *M.jl, r, p, *M.ll);
-		revrsSolutionCSC(*M.il, *M.jl, p, p, *M.ll);
+		matrix.forwSolutionCSR(*M.il, *M.jl, r, p, *M.ll);
+		matrix.revrsSolutionCSC(*M.il, *M.jl, p, p, *M.ll);
 
 		b = scalar(p, r) / b;
 		for (size_t i = 0; i < f->size(); i++)
@@ -50,7 +44,7 @@ private:
 	void iterationDiag(std::vector<T> &r, std::vector<T> &p, std::vector<T> &z, std::vector<T> &diag)
 	{
 		std::vector<T> temp(z);
-		multiplyA(temp);
+		A->multiplyA(temp);
 		T b = scalar(p, r);
 		T a = b / scalar(temp, z);
 
@@ -59,7 +53,7 @@ private:
 			(*x)[i] = (*x)[i] + a * z[i];
 			r[i] = r[i] - a * temp[i];
 		}
-		diagSolve(diag, r, p);
+		A->diagSolve(diag, r, p);
 
 		b = scalar(p, r) / b;
 		for (size_t i = 0; i < f->size(); i++)
@@ -71,7 +65,7 @@ private:
 	void iteration(std::vector<T> &r, std::vector<T> &z)
 	{
 		std::vector<T> temp(z);
-		multiplyA(temp);
+		A->multiplyA(temp);
 
 		T rr = scalar(r, r);
 		T a = rr / scalar(temp, z);
@@ -91,12 +85,12 @@ private:
 	void iterationLU(std::vector<T> &r, std::vector<T> &z)
 	{
 		std::vector<T> tmp(z);
-		revrsSolutionCSC(*matrix.iu, *matrix.ju, tmp, tmp, *matrix.lu, false);
-		multiplyA(tmp);
-		forwSolutionCSR(*matrix.il, *matrix.jl, tmp, tmp, *matrix.ll);
-		revrsSolutionCSC(*matrix.il, *matrix.jl, tmp, tmp, *matrix.ll);
-		multiplyAT(tmp);
-		forwSolutionCSR(*matrix.iu, *matrix.ju, tmp, tmp, *matrix.lu, false);
+		matrix.revrsSolutionCSC(*matrix.iu, *matrix.ju, tmp, tmp, *matrix.lu, false);
+		A->multiplyA(tmp);
+		matrix.forwSolutionCSR(*matrix.il, *matrix.jl, tmp, tmp, *matrix.ll);
+		matrix.revrsSolutionCSC(*matrix.il, *matrix.jl, tmp, tmp, *matrix.ll);
+		A->multiplyAT(tmp);
+		matrix.forwSolutionCSR(*matrix.iu, *matrix.ju, tmp, tmp, *matrix.lu, false);
 
 
 		T rr = scalar(r, r);
@@ -180,7 +174,7 @@ public:
 
 				std::vector<T> r(*f);
 				std::vector<T> z(r.size(), 0);
-				diagSolve(*matrix.di, r, z);
+				matrix.diagSolve(*matrix.di, r, z);
 
 				std::vector<T> p(z);
 
@@ -199,8 +193,8 @@ public:
 				{
 					std::vector<T> r(*f);
 					std::vector<T> z(r.size(), 0);
-					forwSolutionCSR(*matrix.il, *matrix.jl, r, z, *matrix.ll);
-					revrsSolutionCSC(*matrix.il, *matrix.jl, z, z, *matrix.ll);
+					matrix.forwSolutionCSR(*matrix.il, *matrix.jl, r, z, *matrix.ll);
+					matrix.revrsSolutionCSC(*matrix.il, *matrix.jl, z, z, *matrix.ll);
 					std::vector<T> p(z);
 
 					for (size_t i = 0; i < iterC && sqrt(scalar(r, r) / scalar(*f, *f)) > eps; i++)
@@ -212,10 +206,10 @@ public:
 				else
 				{
 					std::vector<T> r(*f);
-					forwSolutionCSR(*matrix.il, *matrix.jl, r, r, *matrix.ll);
-					revrsSolutionCSC(*matrix.il, *matrix.jl, r, r, *matrix.ll);
-					multiplyAT(r);
-					forwSolutionCSR(*matrix.iu, *matrix.ju, r, r, *matrix.lu, false);
+					matrix.forwSolutionCSR(*matrix.il, *matrix.jl, r, r, *matrix.ll);
+					matrix.revrsSolutionCSC(*matrix.il, *matrix.jl, r, r, *matrix.ll);
+					A->multiplyAT(r);
+					matrix.forwSolutionCSR(*matrix.iu, *matrix.ju, r, r, *matrix.lu, false);
 					std::vector<T> z(r);
 
 					multiplyTriangle(*x, *matrix.lu, *matrix.iu, *matrix.ju, *matrix.di);
@@ -228,11 +222,11 @@ public:
 						iter++;
 
 						std::vector<T> tmp(x->size(), 0);
-						revrsSolutionCSC(*matrix.iu, *matrix.ju, *x, tmp, *matrix.lu, false);
+						matrix.revrsSolutionCSC(*matrix.iu, *matrix.ju, *x, tmp, *matrix.lu, false);
 
 					}
 
-					revrsSolutionCSC(*matrix.iu, *matrix.ju, *x, *x, *matrix.lu, false);
+					matrix.revrsSolutionCSC(*matrix.iu, *matrix.ju, *x, *x, *matrix.lu, false);
 				}
 
 				break;
