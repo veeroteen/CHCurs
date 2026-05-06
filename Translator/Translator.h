@@ -52,7 +52,7 @@ class Translator
 {
 	std::vector<Node> nodes;
 	std::vector<Elems> elems;
-	std::string lambda = "u";
+	std::string lambda = "sin(u)";
 	double beta = 1;
 	std::ofstream config;
 	bool onEdge(std::array<size_t,3> &heads,std::array<double,3> &normal)
@@ -347,7 +347,7 @@ public:
 		std::ofstream file(outDir + "/elems.txt");
 		for(auto &a : elems)
 		{
-			file << a[0] << " " << a[1] << " " << a[2] << " " << a[3] << " " << "u" << std::endl;
+			file << a[0] << " " << a[1] << " " << a[2] << " " << a[3] << " " << lambda << std::endl;
 		
 		}
 		file.close();

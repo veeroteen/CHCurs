@@ -5,8 +5,8 @@
 int main()
 {
 
-   std::string parasha("cfg.txt");
-   NNFEM<double,Tetrahedron<double>> fm(parasha);
+   std::string cfg("cfg.txt");
+   PNFEM<double,Tetrahedron<double>> fm(cfg);
    fm.Solve(3);
    fm.printU();
 

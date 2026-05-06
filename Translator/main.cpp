@@ -7,7 +7,7 @@ int main()
 
       std::string path = "tetr" + std::to_string(1) + ".msh";
 
-      std::string outDir = "../test" + std::to_string(2);
+      std::string outDir = "../test" + std::to_string(4);
       Translator trans(path, outDir);
       trans.setDirih(outDir, u);
       trans.setNeumanZero();

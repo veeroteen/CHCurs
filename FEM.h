@@ -8,6 +8,8 @@
 #include <set>
 #include "CGM.h"
 #include "Functions.h"
+#include "LOS.h"
+#include <format>
 template<Field T, ElemType El>
 class FEM
 {
@@ -262,10 +264,12 @@ public:
 
    void printU()
    {
+      std::cout << std::endl;
       for(size_t i = 0; i < u.size(); i++)
       {
          std::cout << std::setprecision(16) << u[i] << std::endl;
       }
+      std::cout << std::endl;
    }
 
 };
@@ -346,7 +350,7 @@ public:
                   polyToStr(base, elements[e].basis[j].basis);
                   polys.emplace_back(base);
                   std::vector<StringFun<T>> grads;
-                  std::string base = std::to_string(elements[e].scalGrad(i, j));
+                  std::string base = std::format("{:.15f}",elements[e].scalGrad(i, j));
                   grads.emplace_back(base);
                   grads.emplace_back(elements[e].h);
                   local[((i * (i + 1)) / 2) + j] += integrate(elements[e], elements[e].vertices, nodes, elements[e].V, grads);
@@ -406,7 +410,6 @@ public:
             a = T(0);
          }
          count++;
-         printU();
       } while (delta/std::max(1.0,sqrt(scalar(u,u))) > 1E-14);
 
       std::cout << count << std::endl;
@@ -446,7 +449,7 @@ private:
       auto &lur = *matrix.lu;
 
 
-         for (size_t e = 0; e < elements.size(); e++)
+      for (size_t e = 0; e < elements.size(); e++)
          {
             std::vector<T> local(El::GetNodesCount() * El::GetNodesCount(), 0);
             for (size_t i = 0; i < El::GetNodesCount(); i++)
@@ -466,13 +469,19 @@ private:
                }
                base = elements[e].h.getStringFun();
                auto a = base.find("u");
-               std::string base2 = base;
-               base.replace(a, 1, "(u+(1E-8))");
-               base2.replace(a, 1, "(u-(1E-8))");
-               base = "((" + base + ")-(" + base2 + "))/" + "(2 * (1E-8))";
-               polys.emplace_back(base);
-
-
+               if (a != base.npos)
+               {
+                  std::string base2 = base;
+                  base.replace(a, 1, "(u+(1E-8))");
+                  base2.replace(a, 1, "(u-(1E-8))");
+                  base = "((" + base + ")-(" + base2 + "))/" + "(2 * (1E-8))";
+                  polys.emplace_back(base);
+               }
+               else
+               {
+                  base = "0";
+                  polys.emplace_back(base);
+               }
                for (size_t j = 0; j < El::GetNodesCount(); j++)
                {  
                   T res = 0;
@@ -480,39 +489,30 @@ private:
                   {
                      res += gradu[k] * elements[e].basis[j][k + 1];
                   }
-                  base = std::to_string(res);
+                  base = std::format("{:.15f}",res);
                   polys.emplace_back(base);
                   local[j + i* El::GetNodesCount()] = integrate(elements[e], elements[e].vertices, nodes, elements[e].V, polys);
                   polys.pop_back();
                }
             }
-
             for (size_t i = 0; i < elements[e].vertices.size(); i++)
             {
                dir[elements[e].vertices[i]] += local[i + i* El::GetNodesCount()];
                for (size_t j = 0; j < i; j++)
                {
-                  if (elements[e].vertices[j] < elements[e].vertices[i])
+                  for (size_t it = ilr[elements[e].vertices[i]]; it < ilr[elements[e].vertices[i] + 1]; it++)
                   {
-                     for (size_t it = ilr[elements[e].vertices[i]]; it < ilr[elements[e].vertices[i] + 1]; it++)
+                     if (jlr[it] == elements[e].vertices[j])
                      {
-                        if (jlr[it] == elements[e].vertices[j])
-                        {
-                           llr[it] += local[j+i* El::GetNodesCount()];
-                        }
+                        llr[it] += local[j+i* El::GetNodesCount()];
                      }
-                  }
-               }
-               for (size_t j = 0; j < i; j++)
-               {
-                  for (size_t it = iur[elements[e].vertices[i]]; it < iur[elements[e].vertices[i] + 1]; it++)
-                  {
                      if (jur[it] == elements[e].vertices[j])
                      {
                         lur[it] += local[i + j * El::GetNodesCount()];
                      }
                   }
                }
+
             }
 
          }
@@ -522,7 +522,61 @@ private:
 public:
    using FEM<T, El>::printU;
    NNFEM(std::string &confPath) : FEM<T, El>(confPath) {};
+   void Dirih(size_t count, std::vector<T> &dir, std::vector<T> &llr, std::vector<T> &lur, std::vector<size_t> &ilr, std::vector<size_t> &jlr, std::vector<size_t> &iur, std::vector<size_t> &jur, std::vector<T> &Re)
+   {
+      std::ifstream file(FEM<T,El>::dirihPath);
+      if (file.is_open())
+      {
+         auto &fr = *f;
+         size_t node;
+         T value;
+         for (size_t i = 0; i < count; i++)
+         {
+            file >> node >> value;
+            fr[node] = value;
+            dir[node] = 1;
+            Re[node] = 0;
+            u[node] = value;
+            for (size_t it = ilr[node]; it < ilr[node + 1]; it++)
+            {
+               fr[jlr[it]] -= value * llr[it];
+               llr[it] = 0;
+            }
 
+            for (size_t p = node + 1; p < dir.size(); p++)
+            {
+               for (size_t it = ilr[p]; it < ilr[p + 1] && jlr[it] <= node; it++)
+               {
+                  if (jlr[it] == node)
+                  {
+                     fr[p] = fr[p] - value * llr[it];
+                     llr[it] = 0;
+                  }
+               }
+
+            }
+
+            for (size_t it = iur[node]; it < iur[node + 1]; it++)
+            {
+               lur[it] = 0;
+            }
+
+            for (size_t p = node + 1; p < dir.size(); p++)
+            {
+               for (size_t it = iur[p]; it < iur[p + 1] && jur[it] <= node; it++)
+               {
+                  if (jur[it] == node)
+                  {
+                     lur[it] = 0;
+                  }
+               }
+
+            }
+
+         }
+         file.close();
+      }
+   }
    void Solve(unsigned i)
    {
       StringFun<T> fl;
@@ -611,37 +665,42 @@ public:
 
          Neumann(this->neumann);
          Robin(this->robin, dir, llr, ilr, jlr);
-         Dirih(this->dirih, dir, llr, ilr, jlr);
+         
 
          CMatrix<T> matrix(il, jl, nullptr, nullptr, ll, nullptr, di,true);
 
          std::vector<T> Re(u.size(), 0);
          matrix.multiplyA(u, Re);
 
-         std::vector<T> *lu(ll);
-         std::vector<size_t> *iu(il), *ju(jl);
-
+         std::vector<T> *lu = new std::vector<T>();
+         std::vector<size_t> *iu = new std::vector<size_t>(), *ju = new std::vector<size_t>();
+         *lu = llr;
+         *iu = ilr;
+         *ju = jlr;
          diff(Re, fr,Re);
          matrix.symmetry = false;
          matrix.lu = lu;
          matrix.ju = ju;
          matrix.iu = iu;
-
+         auto &lur = *lu;
+         auto &iur = *iu;
+         auto &jur = *ju;
          NewtonAdd(matrix);
-
+         Dirih(this->dirih, dir, llr,lur, ilr, jlr,iur,jur,Re);
          for (auto &a : Re)
          {
             a = -a;
          }
-         SLAU = new CGM<T>(il, jl, iu, ju, ll, lu, di, &Re);
+         delta = sqrt(scalar(Re, Re));
 
-         SLAU->Solve(i);
-         auto next = SLAU->getX();
-         delta = mod(u, next);
+         LOS<T> *LAU = new LOS<T>(il, jl, iu, ju, ll, lu, di, &Re);
 
+         LAU->Solve(i);
+         std::vector<T> du = LAU->getX();
+         
          for (size_t i = 0; i < nodes.size(); i++)
          {
-            u[i] = next[i];
+            u[i] += du[i];
          }
          for (auto &a : llr)
          {
@@ -655,8 +714,7 @@ public:
          {
             a = T(0);
          }
-         count++;
-         printU();
+         count++;   
       } while (delta > 1E-14);
 
       std::cout << count << std::endl;

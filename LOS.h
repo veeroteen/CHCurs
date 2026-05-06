@@ -8,17 +8,11 @@ class LOS :public ThreeStageBase<T>
 	using ThreeStageBase<T>::f;
 	using ThreeStageBase<T>::x;
 	using ThreeStageBase<T>::symmetry;
-	using ThreeStageBase<T>::revrsSolutionCSC;
-	using ThreeStageBase<T>::forwSolutionCSR;
-	using ThreeStageBase<T>::diagMult;
 	using ThreeStageBase<T>::A;
 	using ThreeStageBase<T>::incompLU;
 	using ThreeStageBase<T>::incompChol;
-	using ThreeStageBase<T>::diagSolve;
 	using ThreeStageBase<T>::eps;
 	using ThreeStageBase<T>::iterC;
-	using ThreeStageBase<T>::multiplyA;
-	using ThreeStageBase<T>::multiplyAT;
 
 private:
 	void iteration(std::vector<T> &r, std::vector<T> &z, std::vector<T> &p)
@@ -33,7 +27,7 @@ private:
 
 		}
 		std::vector<T> temp(r);
-		multiplyA(temp);
+		A->multiplyA(temp);
 
 		b = -scalar(p, temp) / b;
 
@@ -59,9 +53,9 @@ private:
 		}
 		std::vector<T> temp(r);
 
-		diagSolve(diag, r, temp);
-		multiplyA(temp);
-		diagSolve(diag, temp, temp);
+		matrix.diagSolve(diag, r, temp);
+		A->multiplyA(temp);
+		matrix.diagSolve(diag, temp, temp);
 
 
 		b = -scalar(p, temp) / b;
@@ -87,9 +81,9 @@ private:
 		}
 		std::vector<T> temp(r);
 
-		revrsSolutionCSC(*matrix.iu, *matrix.ju, temp, temp, *(matrix.lu), false);
-		multiplyA(temp);
-		forwSolutionCSR(*matrix.il, *matrix.jl, temp, temp, *(matrix.ll));
+		matrix.revrsSolutionCSC(*matrix.iu, *matrix.ju, temp, temp, *(matrix.lu), false);
+		A->multiplyA(temp);
+		matrix.forwSolutionCSR(*matrix.il, *matrix.jl, temp, temp, *(matrix.ll));
 
 
 		b = -scalar(p, temp) / b;
@@ -97,7 +91,7 @@ private:
 
 
 		std::vector<T> Ur(r);
-		revrsSolutionCSC(*matrix.iu, *matrix.ju, r, Ur, *(matrix.lu), false);
+		matrix.revrsSolutionCSC(*matrix.iu, *matrix.ju, r, Ur, *(matrix.lu), false);
 		for (size_t i = 0; i < z.size(); i++)
 		{
 			z[i] = Ur[i] + b * z[i];
@@ -129,7 +123,7 @@ public:
 				std::vector<T> r(*f);
 				std::vector<T> z(r);
 				std::vector<T> p(r);
-				multiplyA(p);
+				A->multiplyA(p);
 
 				for (size_t i = 0; i < iterC && sqrt(scalar(r, r) / scalar(*f, *f)) > eps; i++)
 				{
@@ -149,13 +143,13 @@ public:
 
 
 				std::vector<T> r(*f);
-				diagSolve(diag, r, r);
+				matrix.diagSolve(diag, r, r);
 				std::vector<T> z(r);
-				diagSolve(diag, z, z);
+				matrix.diagSolve(diag, z, z);
 
 				std::vector<T> p(z);
-				multiplyA(p);
-				diagSolve(diag, p, p);
+				A->multiplyA(p);
+				matrix.diagSolve(diag, p, p);
 
 				for (size_t i = 0; i < iterC && sqrt(scalar(r, r) / scalar(*f, *f)) > eps; i++)
 				{
@@ -170,12 +164,12 @@ public:
 				incompLU();
 
 				std::vector<T> r(*f);
-				forwSolutionCSR(*matrix.il, *matrix.jl, r, r, *matrix.ll);
+				matrix.forwSolutionCSR(*matrix.il, *matrix.jl, r, r, *matrix.ll);
 				std::vector<T> z(r.size(), 0);
-				revrsSolutionCSC(*matrix.iu, *matrix.ju, r, z, *matrix.lu, false);
+				matrix.revrsSolutionCSC(*matrix.iu, *matrix.ju, r, z, *matrix.lu, false);
 				std::vector<T> p(z);
-				multiplyA(p);
-				forwSolutionCSR(*matrix.il, *matrix.jl, p, p, *matrix.ll);
+				A->multiplyA(p);
+				matrix.forwSolutionCSR(*matrix.il, *matrix.jl, p, p, *matrix.ll);
 
 				for (size_t i = 0; i < iterC && sqrt(scalar(r, r) / scalar(*f, *f)) > eps; i++)
 				{
