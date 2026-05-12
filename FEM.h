@@ -386,6 +386,15 @@ public:
          Robin(this->robin, dir, llr, ilr, jlr);
          Dirih(this->dirih, dir, llr, ilr, jlr);
 
+         CMatrix<T> matrix(il, jl, nullptr, nullptr, ll, nullptr, di, true);
+         std::vector<T> Re(u.size(), 0);
+         matrix.multiplyA(u, Re);
+         diff(Re, fr, Re);
+
+         if(sqrt(scalar(Re,Re)) < 1E-14)
+         {
+            break;
+         }
 
          SLAU = new CGM<T>(il, jl, nullptr, nullptr, ll, nullptr, di, f);
 
@@ -450,79 +459,81 @@ private:
 
 
       for (size_t e = 0; e < elements.size(); e++)
+      {
+         std::string base = "";
+         std::vector<StringFun<T>> polys;
+         std::vector<T> local(El::GetNodesCount() * El::GetNodesCount(), 0);
+         std::array<T, El::GetDim()> gradu{};
+         for (size_t k = 0; k < El::GetNodesCount(); k++)
          {
-            std::vector<T> local(El::GetNodesCount() * El::GetNodesCount(), 0);
-            for (size_t i = 0; i < El::GetNodesCount(); i++)
+            for (size_t g = 0; g < El::GetDim(); g++)
             {
-               std::vector<StringFun<T>> polys;
-               std::string base = "";
-               polyToStr(base, elements[e].basis[i].basis);
+               gradu[g] += u[elements[e].vertices[k]] * elements[e].basis[k][g + 1];
+            }
+         }
+
+         base = elements[e].h.getStringFun();
+         auto a = base.find("u");
+         if (a != base.npos)
+         {
+            std::string base2 = base;
+            base.replace(a, 1, "(u+(1E-8))");
+            base2.replace(a, 1, "(u-(1E-8))");
+            base = "((" + base + ")-(" + base2 + "))/" + "(2 * (1E-8))";
+            polys.emplace_back(base);
+         }
+
+         for (size_t i = 0; i < El::GetNodesCount(); i++)
+         {
+            polyToStr(base, elements[e].basis[i].basis);
+            polys.emplace_back(base);
+
+            for (size_t j = 0; j < El::GetNodesCount(); j++)
+            {  
+               T res = 0;
+               for (size_t k = 0; k < El::GetDim(); k++)
+               {
+                  res += gradu[k] * elements[e].basis[j][k + 1];
+               }
+               base = std::format("{:.15f}", res);
                polys.emplace_back(base);
 
-               std::array<T, El::GetDim()> gradu{};
-               for (size_t k = 0; k < El::GetNodesCount(); k++)
-               {
-                  for (size_t g = 0; g < El::GetDim(); g++)
-                  {
-                     gradu[g] += u[elements[e].vertices[k]] * elements[e].basis[k][g + 1];
-                  }
-               }
-               base = elements[e].h.getStringFun();
-               auto a = base.find("u");
-               if (a != base.npos)
-               {
-                  std::string base2 = base;
-                  base.replace(a, 1, "(u+(1E-8))");
-                  base2.replace(a, 1, "(u-(1E-8))");
-                  base = "((" + base + ")-(" + base2 + "))/" + "(2 * (1E-8))";
-                  polys.emplace_back(base);
-               }
-               else
-               {
-                  base = "0";
-                  polys.emplace_back(base);
-               }
-               for (size_t j = 0; j < El::GetNodesCount(); j++)
-               {  
-                  T res = 0;
-                  for(size_t k = 0; k < El::GetDim();k++)
-                  {
-                     res += gradu[k] * elements[e].basis[j][k + 1];
-                  }
-                  base = std::format("{:.15f}",res);
-                  polys.emplace_back(base);
-                  local[j + i* El::GetNodesCount()] = integrate(elements[e], elements[e].vertices, nodes, elements[e].V, polys);
-                  polys.pop_back();
-               }
+               local[j + i* El::GetNodesCount()] = integrate(elements[e], elements[e].vertices, nodes, elements[e].V, polys);
+               polys.pop_back();
+                  
             }
-            for (size_t i = 0; i < elements[e].vertices.size(); i++)
+            polys.pop_back();
+         }
+
+
+         for (size_t i = 0; i < elements[e].vertices.size(); i++)
+         {
+            dir[elements[e].vertices[i]] += local[i + i* El::GetNodesCount()];
+            for (size_t j = 0; j < i; j++)
             {
-               dir[elements[e].vertices[i]] += local[i + i* El::GetNodesCount()];
-               for (size_t j = 0; j < i; j++)
+               for (size_t it = ilr[elements[e].vertices[i]]; it < ilr[elements[e].vertices[i] + 1]; it++)
                {
-                  for (size_t it = ilr[elements[e].vertices[i]]; it < ilr[elements[e].vertices[i] + 1]; it++)
+                  if (jlr[it] == elements[e].vertices[j])
                   {
-                     if (jlr[it] == elements[e].vertices[j])
-                     {
-                        llr[it] += local[j+i* El::GetNodesCount()];
-                     }
-                     if (jur[it] == elements[e].vertices[j])
-                     {
-                        lur[it] += local[i + j * El::GetNodesCount()];
-                     }
+                     llr[it] += local[j + i * El::GetNodesCount()];
+                  }
+                  if (jur[it] == elements[e].vertices[j])
+                  {
+                     lur[it] += local[i + j * El::GetNodesCount()];
                   }
                }
-
             }
 
          }
+
+      }
       
    }
 
 public:
    using FEM<T, El>::printU;
    NNFEM(std::string &confPath) : FEM<T, El>(confPath) {};
-   void Dirih(size_t count, std::vector<T> &dir, std::vector<T> &llr, std::vector<T> &lur, std::vector<size_t> &ilr, std::vector<size_t> &jlr, std::vector<size_t> &iur, std::vector<size_t> &jur, std::vector<T> &Re)
+   void Dirih(size_t count, std::vector<T> &dir, std::vector<T> &llr, std::vector<T> &lur, std::vector<size_t> &ilr, std::vector<size_t> &jlr, std::vector<size_t> &iur, std::vector<size_t> &jur)
    {
       std::ifstream file(FEM<T,El>::dirihPath);
       if (file.is_open())
@@ -535,7 +546,6 @@ public:
             file >> node >> value;
             fr[node] = value;
             dir[node] = 1;
-            Re[node] = 0;
             u[node] = value;
             for (size_t it = ilr[node]; it < ilr[node + 1]; it++)
             {
@@ -614,6 +624,7 @@ public:
 
       T delta = T(0);
       size_t count = 0;
+
       do
       {
          for (size_t e = 0; e < elements.size(); e++)
@@ -635,7 +646,6 @@ public:
                   grads.emplace_back(base);
                   grads.emplace_back(elements[e].h);
                   local[((i * (i + 1)) / 2) + j] += integrate(elements[e], elements[e].vertices, nodes, elements[e].V, grads);
-
                   local[((i * (i + 1)) / 2) + j] += gamma * integrate(elements[e], elements[e].vertices, nodes, elements[e].V, polys);
                   polys.pop_back();
                }
@@ -667,26 +677,26 @@ public:
          Robin(this->robin, dir, llr, ilr, jlr);
          
 
-         CMatrix<T> matrix(il, jl, nullptr, nullptr, ll, nullptr, di,true);
+         
 
-         std::vector<T> Re(u.size(), 0);
-         matrix.multiplyA(u, Re);
+         
 
          std::vector<T> *lu = new std::vector<T>();
          std::vector<size_t> *iu = new std::vector<size_t>(), *ju = new std::vector<size_t>();
          *lu = llr;
          *iu = ilr;
          *ju = jlr;
-         diff(Re, fr,Re);
-         matrix.symmetry = false;
-         matrix.lu = lu;
-         matrix.ju = ju;
-         matrix.iu = iu;
+         CMatrix<T> matrix(il, jl, iu, ju, ll, lu, di, false);
          auto &lur = *lu;
          auto &iur = *iu;
          auto &jur = *ju;
          NewtonAdd(matrix);
-         Dirih(this->dirih, dir, llr,lur, ilr, jlr,iur,jur,Re);
+         Dirih(this->dirih, dir, llr,lur, ilr, jlr,iur,jur);
+         
+         std::vector<T> Re(u.size(), 0);
+         matrix.multiplyA(u, Re);
+         diff(Re, fr, Re);
+
          for (auto &a : Re)
          {
             a = -a;
@@ -694,10 +704,10 @@ public:
          delta = sqrt(scalar(Re, Re));
 
          LOS<T> *LAU = new LOS<T>(il, jl, iu, ju, ll, lu, di, &Re);
-
-         LAU->Solve(i);
-         std::vector<T> du = LAU->getX();
          
+         LAU->Solve(2);
+         std::vector<T> du = LAU->getX();
+
          for (size_t i = 0; i < nodes.size(); i++)
          {
             u[i] += du[i];
@@ -714,7 +724,9 @@ public:
          {
             a = T(0);
          }
-         count++;   
+         count++;
+
+
       } while (delta > 1E-14);
 
       std::cout << count << std::endl;

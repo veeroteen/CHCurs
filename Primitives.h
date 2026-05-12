@@ -360,7 +360,8 @@ T integrate(const El &element, const std::array<size_t, 4> &tetr, std::vector<No
 
       for (auto &a : polys)
       {
-         g *= a.evaluate(map);
+         auto b = a.evaluate(map);
+         g *= b;
       }
 
       result += w * g;

@@ -52,7 +52,7 @@ class Translator
 {
 	std::vector<Node> nodes;
 	std::vector<Elems> elems;
-	std::string lambda = "sin(u)";
+	std::string lambda = "u";
 	double beta = 1;
 	std::ofstream config;
 	bool onEdge(std::array<size_t,3> &heads,std::array<double,3> &normal)
@@ -138,13 +138,14 @@ public:
 		std::ofstream out(outDir + "/dirih.txt");
 		for(size_t i = 0; i < nodes.size();i++)
 		{			
-			
+			/*
 			if (nodes[i][2] == 0)
 			{
 				out << i << " " << std::setprecision(16) << f(nodes[i].cords) << std::endl;
 				count++;
 			}
-			/*
+			*/
+			
 			if (nodes[i][0] == 0)
 			{
 				out << i << " " << std::setprecision(16) << f(nodes[i].cords) << std::endl;
@@ -175,7 +176,7 @@ public:
 				out << i << " " << std::setprecision(16) << f(nodes[i].cords) << std::endl;
 				count++;
 			}
-			*/
+			
 		}
 
 		out.close();

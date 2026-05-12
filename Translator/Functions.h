@@ -13,7 +13,7 @@ void ustr(std::string &fun)
 }
 void fu(std::string &fun)
 {
-	fun = "-3cos(x+y+z)";
+	fun = "-3";
 }
 
 void gu(std::array<double,3> &normal,std::string &poly)
