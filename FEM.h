@@ -10,6 +10,7 @@
 #include "Functions.h"
 #include "LOS.h"
 #include <format>
+#include "BCGStab.h"
 template<Field T, ElemType El>
 class FEM
 {
@@ -401,7 +402,6 @@ public:
          SLAU->Solve(i);
          auto next = SLAU->getX();
          delta = mod(u, next);
-
          for (size_t i = 0; i < nodes.size(); i++)
          {
             u[i] = next[i];
@@ -482,29 +482,28 @@ private:
             base = "((" + base + ")-(" + base2 + "))/" + "(2 * (1E-8))";
             polys.emplace_back(base);
          }
+         else
+         {
+            continue;
+         }
 
          for (size_t i = 0; i < El::GetNodesCount(); i++)
          {
-            polyToStr(base, elements[e].basis[i].basis);
-            polys.emplace_back(base);
+            T res = 0;
+            for (size_t k = 0; k < El::GetDim(); k++)
+            {
+               res += gradu[k] * elements[e].basis[i][k + 1];
+            }
 
             for (size_t j = 0; j < El::GetNodesCount(); j++)
             {  
-               T res = 0;
-               for (size_t k = 0; k < El::GetDim(); k++)
-               {
-                  res += gradu[k] * elements[e].basis[j][k + 1];
-               }
-               base = std::format("{:.15f}", res);
+               polyToStr(base, elements[e].basis[j].basis);
                polys.emplace_back(base);
-
-               local[j + i* El::GetNodesCount()] = integrate(elements[e], elements[e].vertices, nodes, elements[e].V, polys);
+               local[j + i * El::GetNodesCount()] = res * integrate(elements[e], elements[e].vertices, nodes, elements[e].V, polys);
                polys.pop_back();
-                  
             }
-            polys.pop_back();
+            
          }
-
 
          for (size_t i = 0; i < elements[e].vertices.size(); i++)
          {
@@ -587,7 +586,7 @@ public:
          file.close();
       }
    }
-   void Solve(unsigned i)
+   void Solve(unsigned solven)
    {
       StringFun<T> fl;
       setF(fl);
@@ -625,7 +624,7 @@ public:
       T delta = T(0);
       size_t count = 0;
 
-      do
+      while(true)
       {
          for (size_t e = 0; e < elements.size(); e++)
          {
@@ -676,11 +675,6 @@ public:
          Neumann(this->neumann);
          Robin(this->robin, dir, llr, ilr, jlr);
          
-
-         
-
-         
-
          std::vector<T> *lu = new std::vector<T>();
          std::vector<size_t> *iu = new std::vector<size_t>(), *ju = new std::vector<size_t>();
          *lu = llr;
@@ -690,22 +684,26 @@ public:
          auto &lur = *lu;
          auto &iur = *iu;
          auto &jur = *ju;
-         NewtonAdd(matrix);
-         Dirih(this->dirih, dir, llr,lur, ilr, jlr,iur,jur);
-         
+         Dirih(this->dirih, dir, llr, lur, ilr, jlr, iur, jur);
          std::vector<T> Re(u.size(), 0);
          matrix.multiplyA(u, Re);
          diff(Re, fr, Re);
-
-         for (auto &a : Re)
+         NewtonAdd(matrix);
+         Dirih(this->dirih, dir, llr,lur, ilr, jlr,iur,jur);
+         
+         for(auto &a : Re)
          {
             a = -a;
          }
          delta = sqrt(scalar(Re, Re));
-
-         LOS<T> *LAU = new LOS<T>(il, jl, iu, ju, ll, lu, di, &Re);
+         std::cout << delta << std::endl;
+         if(delta < 1E-14)
+         {
+            break;
+         }
+         BCGStab<T> *LAU = new BCGStab<T>(il, jl, iu, ju, ll, lu, di, &Re);
          
-         LAU->Solve(2);
+         LAU->Solve(1);
          std::vector<T> du = LAU->getX();
 
          for (size_t i = 0; i < nodes.size(); i++)
@@ -727,7 +725,7 @@ public:
          count++;
 
 
-      } while (delta > 1E-14);
+      }
 
       std::cout << count << std::endl;
    }

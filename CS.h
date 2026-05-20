@@ -15,9 +15,17 @@ struct CMatrix
 	std::vector<size_t> *il, *jl, *iu, *ju;
 	bool owner = false;
 	bool symmetry = false;
-	CMatrix(std::vector<size_t> *il, std::vector<size_t> *jl, std::vector<size_t> *iu, std::vector<size_t> *ju, std::vector<T> *ll, std::vector<T> *lu, std::vector<T> *di, bool symmetry) :
-		il(il), jl(jl), iu(iu), ju(ju), ll(ll), lu(lu), di(di), symmetry(symmetry) {};
-
+	CMatrix(std::vector<size_t> *il, std::vector<size_t> *jl, std::vector<size_t> *iu, std::vector<size_t> *ju, std::vector<T> *ll, std::vector<T> *lu, std::vector<T> *di, bool symmetry = false)
+	{
+		this->ll = ll;
+		this->lu = lu;
+		this->di = di;
+		this->il = il;
+		this->jl = jl;
+		this->iu = iu;
+		this->ju = ju;
+		this->symmetry = (lu == nullptr ? true : false);
+	};
 	void load(std::vector<size_t> *_il, std::vector<size_t> *_jl, std::vector<size_t> *_iu, std::vector<size_t> *_ju, std::vector<T> *_ll, std::vector<T> *_lu, std::vector<T> *_di, bool _symmetry)
 	{
 		symmetry = _symmetry;
@@ -293,7 +301,7 @@ protected:
 		eps = 1E-30;
 		iterC = 10000;
 	}
-	ThreeStageBase(std::string &path)
+	ThreeStageBase(std::string &path,bool sym = true)
 	{
 		std::ifstream file(path + "/kuslau.txt");
 		size_t size;
@@ -366,14 +374,19 @@ protected:
 		}
 		file.close();
 		x = new std::vector<T>(size, 0);
-		if (symmetry)
+		if (sym)
 		{
 			
 			A = new CMatrix<T>(matrix.il, matrix.jl,nullptr , nullptr, matrix.ll,nullptr , matrix.di);
 		}
 		else
 		{
-			A = new CMatrix<T>(matrix.il, matrix.jl, matrix.iu, matrix.ju, matrix.ll, matrix.lu, matrix.di);
+			*matrix.lu = *matrix.ll;
+			*matrix.iu = *matrix.il;
+			*matrix.ju = *matrix.jl;
+			symmetry = false;
+			matrix.symmetry = false;
+			A = new CMatrix<T>(matrix.il, matrix.jl, matrix.iu, matrix.ju, matrix.ll, matrix.lu, matrix.di,false);
 		}
 	}
 
@@ -494,13 +507,37 @@ protected:
 		iterC = 10000;
 	}
 
+	void reAlloc()
+	{
+		*matrix.di = *A->di;
+		*matrix.il = *A->il;
+		*matrix.jl = *A->jl;
+		*matrix.ll = *A->ll;
+		*matrix.iu = *A->iu;
+		*matrix.ju = *A->ju;
+		*matrix.lu = *A->lu;
+		matrix.owner = true;
+	}
+
 	void incompLU()
 	{
-
 		matrix.di = new std::vector<T>(*A->di);
+		matrix.il = new std::vector<size_t>(*A->il);
+		matrix.jl = new std::vector<size_t>(*A->jl);
 		matrix.ll = new std::vector<T>(*A->ll);
+		matrix.iu = new std::vector<size_t>(*A->iu);
+		matrix.ju = new std::vector<size_t>(*A->ju);
 		matrix.lu = new std::vector<T>(*A->lu);
+		matrix.owner = true;
 
+
+
+		if (symmetry)
+		{
+			*matrix.lu = *matrix.ll;
+			*matrix.iu = *matrix.il;
+			*matrix.ju = *matrix.jl;
+		}
 		for (size_t i = 0; i < f->size(); i++)
 		{
 			//L
@@ -528,7 +565,6 @@ protected:
 
 				(*matrix.ll)[k] = ((*matrix.ll)[k] - buff) / (*matrix.di)[jl];
 			}
-
 			//U
 			for (size_t k = (*matrix.iu)[i]; k < (*matrix.iu)[i + 1]; k++)
 			{
@@ -548,7 +584,6 @@ protected:
 				}
 				(*matrix.lu)[k] = (*matrix.lu)[k] - buff;
 			}
-
 			//diag
 			T diag = T();
 			for (size_t il = (*matrix.il)[i]; il < (*matrix.il)[i + 1]; il++)
@@ -617,7 +652,7 @@ protected:
 public:
 	void setF()
 	{
-		multiplyA(*f);
+		A->multiplyA(*f);
 	}
 	void OutCSR(std::ostream &stream)
 	{

@@ -103,12 +103,11 @@ private:
 public:
 	LOS(std::vector<size_t> *il, std::vector<size_t> *jl, std::vector<size_t> *iu, std::vector<size_t> *ju, std::vector<T> *ll, std::vector<T> *lu, std::vector<T> *di, std::vector<T> *f) : ThreeStageBase<T>(il, jl, iu, ju, ll, lu, di, f)
 	{
-
 	}
 	LOS(std::istream &input) : ThreeStageBase<T>(input)
 	{
 	}
-	LOS(std::string &path) : ThreeStageBase<T>(path)
+	LOS(std::string &path) : ThreeStageBase<T>(path,false)
 	{
 	}
 
@@ -162,7 +161,6 @@ public:
 			case 3:
 			{
 				incompLU();
-
 				std::vector<T> r(*f);
 				matrix.forwSolutionCSR(*matrix.il, *matrix.jl, r, r, *matrix.ll);
 				std::vector<T> z(r.size(), 0);

@@ -6,9 +6,9 @@ int main()
 {
 
    std::string cfg("cfg.txt");
-   NNFEM<double,Tetrahedron<double>> fm(cfg);
-   fm.Solve(3);
-   fm.printU();
+   PNFEM<double,Tetrahedron<double>> fm(cfg);
+   fm.Solve(1);
+   //fm.printU();
 
 }
 

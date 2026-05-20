@@ -130,6 +130,7 @@
     <ClCompile Include="CHCurs.cpp" />
   </ItemGroup>
   <ItemGroup>
+    <ClInclude Include="BCGStab.h" />
     <ClInclude Include="CGM.h" />
     <ClInclude Include="CS.h" />
     <ClInclude Include="FEM.h" />
