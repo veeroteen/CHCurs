@@ -14,7 +14,7 @@ int main()
       //trans.setNeuman(outDir, gu);
       trans.setRobinZero();
       //trans.setRobin(outDir, gu, ustr);
-      trans.setNodes(outDir, fu);
+      trans.setNodes(outDir, fu,ustr);
       trans.setElements(outDir);
    
 }

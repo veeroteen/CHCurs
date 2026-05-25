@@ -52,7 +52,8 @@ class Translator
 {
 	std::vector<Node> nodes;
 	std::vector<Elems> elems;
-	std::string lambda = "u";
+	std::string lambda = "1";
+	std::string gamma = "u";
 	double beta = 1;
 	std::ofstream config;
 	bool onEdge(std::array<size_t,3> &heads,std::array<double,3> &normal)
@@ -125,7 +126,6 @@ public:
 			std::sort(elems[i].cords.begin(), elems[i].cords.end());
 		}
 		input.close();
-		double gamma = 0;
 		config << gamma << std::endl;
 		config << nodes.size() << std::endl;
 		config << elems.size() << std::endl;
@@ -328,12 +328,14 @@ public:
 
 
 	template <typename F>
-	void setNodes(std::string &outDir,F laplas)
+	void setNodes(std::string &outDir,F laplas,F u_str)
 	{
 		std::ofstream f(outDir + "/f.txt");
 		std::string fun;
 		laplas(fun);
-		f << fun << std::endl;
+		std::string gamm;
+		u_str(gamm);
+		f << fun + "+" + gamma + "*" + gamm << std::endl;
 		std::ofstream file(outDir + "/nodes.txt");
 		for(auto &a : nodes)
 		{

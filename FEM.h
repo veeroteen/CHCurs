@@ -28,7 +28,7 @@ protected:
       elemntsPath,
       fPath;
    size_t dirih = 0, neumann = 0, robin = 0;
-   T gamma = 0;
+   StringFun<T> gamma;
    size_t size = 0;
    size_t elemCount = 0;
 
@@ -240,8 +240,9 @@ public:
       conf.close();
 
       conf.open(DIR + "/config.txt");
-
-      conf >> gamma;
+      std::string buff = "";
+      std::getline(conf, buff);
+      gamma = StringFun<T>(buff);
       conf >> size;
       conf >> elemCount;
       conf >> dirih;
@@ -334,7 +335,7 @@ public:
 
       T delta = T(0);
       size_t count = 0;
-      do
+      while(true)
       {
          for (size_t e = 0; e < elements.size(); e++)
          {
@@ -345,7 +346,7 @@ public:
                std::string base = "";
                polyToStr(base, elements[e].basis[i].basis);
                polys.emplace_back(base);
-
+               polys.push_back(gamma);
                for (size_t j = 0; j <= i; j++)
                {
                   polyToStr(base, elements[e].basis[j].basis);
@@ -355,10 +356,10 @@ public:
                   grads.emplace_back(base);
                   grads.emplace_back(elements[e].h);
                   local[((i * (i + 1)) / 2) + j] += integrate(elements[e], elements[e].vertices, nodes, elements[e].V, grads);
-
-                  local[((i * (i + 1)) / 2) + j] += gamma * integrate(elements[e], elements[e].vertices, nodes, elements[e].V, polys);
+                  local[((i * (i + 1)) / 2) + j] += integrate(elements[e], elements[e].vertices, nodes, elements[e].V, polys);
                   polys.pop_back();
                }
+               polys.pop_back();
                polys.push_back(fl);
                fr[elements[e].vertices[i]] += integrate(elements[e], elements[e].vertices, nodes, elements[e].V, polys);
             }
@@ -391,7 +392,6 @@ public:
          std::vector<T> Re(u.size(), 0);
          matrix.multiplyA(u, Re);
          diff(Re, fr, Re);
-
          if(sqrt(scalar(Re,Re)) < 1E-14)
          {
             break;
@@ -419,7 +419,7 @@ public:
             a = T(0);
          }
          count++;
-      } while (delta/std::max(1.0,sqrt(scalar(u,u))) > 1E-14);
+      }
 
       std::cout << count << std::endl;
    }
@@ -456,75 +456,116 @@ private:
       auto &iur = *matrix.iu;
       auto &jur = *matrix.ju;
       auto &lur = *matrix.lu;
-
+      std::vector<StringFun<T>> gammaTerm;
+      bool gam = false;
+      std::string buff = gamma.getStringFun();
+      auto a = buff.find("u");
+      if (a != buff.npos)
+      {
+         std::string base2 = buff;
+         buff.replace(a, 1, "(u+(1E-8))");
+         base2.replace(a, 1, "(u-(1E-8))");
+         buff = "((" + buff + ")-(" + base2 + "))/" + "(2 * (1E-8))";
+         gammaTerm.emplace_back(buff);
+         buff = "u";
+         gammaTerm.emplace_back(buff);
+         gam = true;
+      }
+      else
+      {
+         gam = false;
+      }
 
       for (size_t e = 0; e < elements.size(); e++)
       {
+         bool lam = false;
          std::string base = "";
-         std::vector<StringFun<T>> polys;
+         std::vector<StringFun<T>> lambdaTerm;
          std::vector<T> local(El::GetNodesCount() * El::GetNodesCount(), 0);
-         std::array<T, El::GetDim()> gradu{};
-         for (size_t k = 0; k < El::GetNodesCount(); k++)
-         {
-            for (size_t g = 0; g < El::GetDim(); g++)
-            {
-               gradu[g] += u[elements[e].vertices[k]] * elements[e].basis[k][g + 1];
-            }
-         }
 
          base = elements[e].h.getStringFun();
          auto a = base.find("u");
+         
          if (a != base.npos)
          {
             std::string base2 = base;
             base.replace(a, 1, "(u+(1E-8))");
             base2.replace(a, 1, "(u-(1E-8))");
             base = "((" + base + ")-(" + base2 + "))/" + "(2 * (1E-8))";
-            polys.emplace_back(base);
+            lambdaTerm.emplace_back(base);
+            lam = true;
          }
          else
          {
-            continue;
+            lam = false;
          }
 
-         for (size_t i = 0; i < El::GetNodesCount(); i++)
+         if (gam || lam)
          {
-            T res = 0;
-            for (size_t k = 0; k < El::GetDim(); k++)
+            if (lam)
             {
-               res += gradu[k] * elements[e].basis[i][k + 1];
-            }
-
-            for (size_t j = 0; j < El::GetNodesCount(); j++)
-            {  
-               polyToStr(base, elements[e].basis[j].basis);
-               polys.emplace_back(base);
-               local[j + i * El::GetNodesCount()] = res * integrate(elements[e], elements[e].vertices, nodes, elements[e].V, polys);
-               polys.pop_back();
-            }
-            
-         }
-
-         for (size_t i = 0; i < elements[e].vertices.size(); i++)
-         {
-            dir[elements[e].vertices[i]] += local[i + i* El::GetNodesCount()];
-            for (size_t j = 0; j < i; j++)
-            {
-               for (size_t it = ilr[elements[e].vertices[i]]; it < ilr[elements[e].vertices[i] + 1]; it++)
+               std::array<T, El::GetDim()> gradu{};
+               for (size_t k = 0; k < El::GetNodesCount(); k++)
                {
-                  if (jlr[it] == elements[e].vertices[j])
+                  for (size_t g = 0; g < El::GetDim(); g++)
                   {
-                     llr[it] += local[j + i * El::GetNodesCount()];
-                  }
-                  if (jur[it] == elements[e].vertices[j])
-                  {
-                     lur[it] += local[i + j * El::GetNodesCount()];
+                     gradu[g] += u[elements[e].vertices[k]] * elements[e].basis[k][g + 1];
                   }
                }
+               for (size_t i = 0; i < El::GetNodesCount(); i++)
+               {
+                  T res = 0;
+                  for (size_t k = 0; k < El::GetDim(); k++)
+                  {
+                     res += gradu[k] * elements[e].basis[i][k + 1];
+                  }
+
+                  for (size_t j = 0; j < El::GetNodesCount(); j++)
+                  {
+                     polyToStr(base, elements[e].basis[j].basis);
+                     lambdaTerm.emplace_back(base);
+                     local[j + i * El::GetNodesCount()] = res * integrate(elements[e], elements[e].vertices, nodes, elements[e].V, lambdaTerm);
+                     lambdaTerm.pop_back();
+                  }
+
+               }
             }
+            if(gam)
+            {
+               for (size_t i = 0; i < El::GetNodesCount(); i++)
+               {
+                  polyToStr(base, elements[e].basis[i].basis);
+                  gammaTerm.emplace_back(base);
+                  for (size_t j = 0; j < El::GetNodesCount(); j++)
+                  {
+                     polyToStr(base, elements[e].basis[j].basis);
+                     gammaTerm.emplace_back(base);
+                     local[j + i * El::GetNodesCount()] = integrate(elements[e], elements[e].vertices, nodes, elements[e].V, gammaTerm);
+                     gammaTerm.pop_back();
+                  }
+                  gammaTerm.pop_back();
+               }
+            }
+            for (size_t i = 0; i < elements[e].vertices.size(); i++)
+            {
+               dir[elements[e].vertices[i]] += local[i + i * El::GetNodesCount()];
+               for (size_t j = 0; j < i; j++)
+               {
+                  for (size_t it = ilr[elements[e].vertices[i]]; it < ilr[elements[e].vertices[i] + 1]; it++)
+                  {
+                     if (jlr[it] == elements[e].vertices[j])
+                     {
+                        llr[it] += local[j + i * El::GetNodesCount()];
+                     }
+                     if (jur[it] == elements[e].vertices[j])
+                     {
+                        lur[it] += local[i + j * El::GetNodesCount()];
+                     }
+                  }
+               }
 
+            }
          }
-
       }
       
    }
@@ -626,16 +667,18 @@ public:
 
       while(true)
       {
+         std::vector<StringFun<T>> polys;
+         polys.push_back(gamma);
          for (size_t e = 0; e < elements.size(); e++)
          {
             std::vector<T> local(El::GetNodesCount() * (El::GetNodesCount() + 1) / 2, 0);
             for (size_t i = 0; i < El::GetNodesCount(); i++)
             {
-               std::vector<StringFun<T>> polys;
+               
                std::string base = "";
                polyToStr(base, elements[e].basis[i].basis);
                polys.emplace_back(base);
-
+               
                for (size_t j = 0; j <= i; j++)
                {
                   polyToStr(base, elements[e].basis[j].basis);
@@ -645,11 +688,13 @@ public:
                   grads.emplace_back(base);
                   grads.emplace_back(elements[e].h);
                   local[((i * (i + 1)) / 2) + j] += integrate(elements[e], elements[e].vertices, nodes, elements[e].V, grads);
-                  local[((i * (i + 1)) / 2) + j] += gamma * integrate(elements[e], elements[e].vertices, nodes, elements[e].V, polys);
+                  local[((i * (i + 1)) / 2) + j] += integrate(elements[e], elements[e].vertices, nodes, elements[e].V, polys);
                   polys.pop_back();
                }
                polys.push_back(fl);
                fr[elements[e].vertices[i]] += integrate(elements[e], elements[e].vertices, nodes, elements[e].V, polys);
+               polys.pop_back();
+               polys.pop_back();
             }
 
             for (size_t i = 0; i < elements[e].vertices.size(); i++)
