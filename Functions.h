@@ -87,3 +87,4 @@ public:
       return _fun;
    }
 };
+
