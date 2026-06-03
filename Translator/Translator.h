@@ -53,8 +53,9 @@ class Translator
 	std::vector<Node> nodes;
 	std::vector<Elems> elems;
 	std::string lambda = "1";
-	std::string gamma = "u";
+	std::string gamma = "2t";
 	double beta = 1;
+	double t0 = 0, tn = 1, h = 0.1;
 	std::ofstream config;
 	bool onEdge(std::array<size_t,3> &heads,std::array<double,3> &normal)
 	{
@@ -126,7 +127,9 @@ public:
 			std::sort(elems[i].cords.begin(), elems[i].cords.end());
 		}
 		input.close();
-		config << gamma << std::endl;
+		config << t0 << std::endl;
+		config << tn << std::endl;
+		config << h << std::endl;
 		config << nodes.size() << std::endl;
 		config << elems.size() << std::endl;
 	}
@@ -136,6 +139,7 @@ public:
 	{
 		size_t count = 0;
 		std::ofstream out(outDir + "/dirih.txt");
+		std::string fun = "";
 		for(size_t i = 0; i < nodes.size();i++)
 		{			
 			/*
@@ -145,35 +149,35 @@ public:
 				count++;
 			}
 			*/
-			
+			f(fun);
 			if (nodes[i][0] == 0)
 			{
-				out << i << " " << std::setprecision(16) << f(nodes[i].cords) << std::endl;
+				out << i << " " << fun << std::endl;
 				count++;
 				}
 			else if (nodes[i][0] == 0.5)
 			{
-				out << i << " " << std::setprecision(16) << f(nodes[i].cords) << std::endl;
+				out << i << " " << fun << std::endl;
 				count++;
 			}
 			else if (nodes[i][1] == 0)
 			{
-				out << i << " " << std::setprecision(16) << f(nodes[i].cords) << std::endl;
+				out << i << " " << fun << std::endl;
 				count++;
 			}
 			else if (nodes[i][1] == 0.5)
 			{
-				out << i << " " << std::setprecision(16) << f(nodes[i].cords) << std::endl;
+				out << i << " " << fun << std::endl;
 				count++;
 			}
 			else if(nodes[i][2] == 0)
 			{
-				out << i << " " << std::setprecision(16) << f(nodes[i].cords) << std::endl;
+				out << i << " " << fun << std::endl;
 				count++;
 			}
 			else if (nodes[i][2] == 0.5)
 			{
-				out << i << " " << std::setprecision(16) << f(nodes[i].cords) << std::endl;
+				out << i << " " << fun << std::endl;
 				count++;
 			}
 			
@@ -335,11 +339,13 @@ public:
 		laplas(fun);
 		std::string gamm;
 		u_str(gamm);
-		f << fun + "+" + gamma + "*" + gamm << std::endl;
+
+		f << fun << std::endl;
+		
 		std::ofstream file(outDir + "/nodes.txt");
 		for(auto &a : nodes)
 		{
-			file << a[0] << "\t" << a[1] << "\t" << a[2] << "\t" << 1 << std::endl;
+			file << a[0] << "\t" << a[1] << "\t" << a[2] << "\t" << a[0]+a[1]+a[2] << std::endl;
 			
 		}
 		file.close();

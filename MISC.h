@@ -104,3 +104,27 @@ T mod(const std::vector<T> &a,const std::vector<T> &b)
 
 }
 
+template<Field T>
+void MultTrM(std::vector<T> &M, std::vector<T> &a)
+{
+   std::vector<T> buff(a.size(), 0);
+   for (size_t i = 0; i < a.size(); i++)
+   {
+      for (size_t j = 0; j <= i; j++)
+      {
+         buff[i] += a[j] * M[((i * (i + 1)) / 2) + j];
+      }
+      for (size_t j = i + 1; j < a.size(); j++)
+      {
+         buff[i] += a[j] * M[((j * (j + 1)) / 2) + i];
+
+      }
+   }
+   for(size_t i = 0; i < a.size();i++)
+   {
+      a[i] = buff[i];
+   }
+
+
+
+}

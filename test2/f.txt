@@ -1,1 +1,1 @@
-sin(x+y+z)*(x+y+z)
+cos(t)

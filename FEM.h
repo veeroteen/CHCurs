@@ -31,7 +31,8 @@ protected:
    StringFun<T> gamma;
    size_t size = 0;
    size_t elemCount = 0;
-
+   double t0, tn,th;
+   size_t Nt;
    void Neumann(size_t count)
    {
       std::ifstream file(newumannPath);
@@ -117,16 +118,18 @@ protected:
       {
          auto &fr = *f;
          size_t node;
-         T value;
+         std::string fun = "";
          for (size_t i = 0; i < count; i++)
          {
-            file >> node >> value;
-            fr[node] = value;
+            file >> node;
+            std::getline(file,fun);
+            StringFun<T> fs(fun);
+            fr[node] = fs.evaluate(nodes[node].node);
             dir[node] = 1;
 
             for (size_t it = ilr[node]; it < ilr[node + 1]; it++)
             {
-               fr[jlr[it]] -= value * llr[it];
+               fr[jlr[it]] -= fs.evaluate(nodes[node].node) * llr[it];
                llr[it] = 0;
             }
 
@@ -137,7 +140,7 @@ protected:
                   if (jlr[it] == node)
                   {
 
-                     fr[p] = fr[p] - value * llr[it];
+                     fr[p] = fr[p] - fs.evaluate(nodes[node].node) * llr[it];
                      llr[it] = 0;
 
                   }
@@ -241,8 +244,10 @@ public:
 
       conf.open(DIR + "/config.txt");
       std::string buff = "";
-      std::getline(conf, buff);
-      gamma = StringFun<T>(buff);
+      conf >> t0;
+      conf >> tn;
+      conf >> th;
+      Nt = (tn - t0) / th;
       conf >> size;
       conf >> elemCount;
       conf >> dirih;
@@ -286,7 +291,9 @@ class LFEM : public FEM <T, El >
    using FEM<T, El>::u;
    using FEM<T, El>::f;
    using FEM<T, El>::size;
-   using FEM<T, El>::gamma;
+   using FEM<T, El>::t0;
+   using FEM<T, El>::tn;
+   using FEM<T, El>::Nt;
 
    using FEM<T, El>::SLAU;
    using FEM<T, El>::Neumann;
@@ -325,7 +332,6 @@ class LFEM : public FEM <T, El >
                M[((i * (i + 1)) / 2) + j] += integrate(elements[e], elements[e].vertices, nodes, elements[e].V, polys);
                polys.pop_back();
             }
-            polys.pop_back();
             polys.push_back(fl);
             fr[elements[e].vertices[i]] += integrate(elements[e], elements[e].vertices, nodes, elements[e].V, polys);
 
@@ -339,7 +345,6 @@ class LFEM : public FEM <T, El >
             for (size_t j = i + 1; j < El::GetNodesCount(); j++)
             {
                fr[elements[e].vertices[i]] += 1.0 / dt * u[elements[e].vertices[j]] * M[((j * (j + 1)) / 2) + i];
-
             }
          }
          for (size_t i = 0; i < elements[e].vertices.size(); i++)
@@ -397,7 +402,6 @@ class LFEM : public FEM <T, El >
                M[((i * (i + 1)) / 2) + j] += integrate(elements[e], elements[e].vertices, nodes, elements[e].V, polys);
                polys.pop_back();
             }
-            polys.pop_back();
             polys.push_back(fl);
             fr[elements[e].vertices[i]] += integrate(elements[e], elements[e].vertices, nodes, elements[e].V, polys);
 
@@ -407,19 +411,22 @@ class LFEM : public FEM <T, El >
             for (size_t j = 0; j <= i; j++)
             {
                fr[elements[e].vertices[i]] +=
-                  2.0 / dt * u[elements[e].vertices[j]] * M[((i * (i + 1)) / 2) + j] -
-                  uprev[elements[e].vertices[j]] * M[((i * (i + 1)) / 2) + j]/(2*dt);
+                  (
+                     M[((i * (i + 1)) / 2) + j] * (4.0 * u[elements[e].vertices[j]] - uprev[elements[e].vertices[j]]) / (dt * 2.0)
+                  );
             }
             for (size_t j = i + 1; j < El::GetNodesCount(); j++)
             {
-               fr[elements[e].vertices[i]] += 2.0 / dt * u[elements[e].vertices[j]] * M[((j * (j + 1)) / 2) + i]-
-                  uprev[elements[e].vertices[j]] * M[((j * (j + 1)) / 2) + i] / (2 * dt);;
-
+               fr[elements[e].vertices[i]] +=
+                  (
+                     M[((j * (j + 1)) / 2) + i] * (4.0* u[elements[e].vertices[j]] - uprev[elements[e].vertices[j]])/(dt*2.0)
+                  );
             }
          }
+
          for (size_t i = 0; i < elements[e].vertices.size(); i++)
          {
-            dir[elements[e].vertices[i]] += local[((i * (i + 1)) / 2) + i] + 3 * M[((i * (i + 1)) / 2) + i] / (2 * dt);;
+            dir[elements[e].vertices[i]] += local[((i * (i + 1)) / 2) + i] + 3 * M[((i * (i + 1)) / 2) + i] / (2.0 * dt);;
             for (size_t j = 0; j < i; j++)
             {
                if (elements[e].vertices[j] < elements[e].vertices[i])
@@ -428,9 +435,11 @@ class LFEM : public FEM <T, El >
                   {
                      if (jlr[it] == elements[e].vertices[j])
                      {
-                        llr[it] += 
-                           local[((i * (i + 1)) / 2) + j] + 
-                           3*M[((i * (i + 1)) / 2) + j]/(2*dt);
+                        llr[it] +=
+                           (
+                              local[((i * (i + 1)) / 2) + j] +
+                              3.0 * M[((i * (i + 1)) / 2) + j] / (2.0 * dt)
+                           );
                      }
                   }
                }
@@ -444,18 +453,32 @@ class LFEM : public FEM <T, El >
       Dirih(this->dirih, dir, llr, ilr, jlr);
 
    }
-
+   void Nullify(std::vector<T> *ll, std::vector<T> *di, std::vector<T> *f)
+   {
+      for (auto &a : *ll)
+      {
+         a = 0;
+      }
+      for (auto &a : *di)
+      {
+         a = 0;
+      }
+      for (auto &a : *f)
+      {
+         a = 0;
+      }
+   }
 public:
    using FEM<T, El>::printU;
    LFEM(std::string &confPath) : FEM<T, El>(confPath) {};
-   double dt = 0.1;
+   double dt = this->th;
    
    void Solve(unsigned i)
    {
       
       StringFun<T> fl;
       setF(fl);
-
+      T t = t0;
       f = new std::vector<T>(size);
       nodes.resize(size);
       u.resize(size);
@@ -487,11 +510,13 @@ public:
       auto &dir = *di;
 
       size_t count = 0;
+      GlobalDict<T>::initT(t);
+      t += dt;
       BaseBuild(il,jl,ll,di,f,fl);
 
       SLAU = new CGM<T>(il, jl, nullptr, nullptr, ll, nullptr, di, f);
 
-      SLAU->Solve(i);
+      SLAU->Solve(2);
       auto next = SLAU->getX();
       std::vector<T> uprev(u.size(), 0);
       for (size_t i = 0; i < nodes.size(); i++)
@@ -500,16 +525,23 @@ public:
          u[i] = next[i];
       }
 
-      size_t Nt = 10;
-
-      for(size_t i = 0; i < Nt; i++)
+      
+      this->printU();
+      for(size_t i = 0; i < Nt-1; i++)
       {
-      
-      
-      
-      
-      
-      
+         Nullify(ll, di, f);
+         t += dt;
+         IterBuild(il, jl, ll, di, f, fl, uprev);
+         
+         SLAU->Solve(2);
+         auto next = SLAU->getX();
+         for (size_t i = 0; i < nodes.size(); i++)
+         {
+            uprev[i] = u[i];
+            u[i] = next[i];
+         }
+         std::cout<< "t: " << t << std::endl;
+         this->printU();
       }
 
    }

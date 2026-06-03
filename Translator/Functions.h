@@ -9,11 +9,11 @@ double u(std::array<double,4> &cords)
 }
 void ustr(std::string &fun)
 {
-	fun = "x+y+z";
+	fun = "x+y+z+sin(t)";
 }
 void fu(std::string &fun)
 {
-	fun = "0";
+	fun = "cos(t)";
 }
 
 void gu(std::array<double,3> &normal,std::string &poly)

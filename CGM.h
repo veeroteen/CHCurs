@@ -150,6 +150,7 @@ public:
 
 	void Solve(unsigned par)
 	{
+		this->nullifyX();
 		size_t iter = 0;
 		switch (par)
 		{

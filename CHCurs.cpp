@@ -9,7 +9,6 @@ int main()
    std::string cfg("cfg.txt");
    LFEM<double,Tetrahedron<double>> fm(cfg);
    fm.Solve(1);
-   fm.printU();
 
 }
 

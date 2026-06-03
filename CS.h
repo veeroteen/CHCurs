@@ -271,6 +271,7 @@ struct CMatrix
 		}
 	}
 
+
 };
 
 
@@ -650,6 +651,13 @@ protected:
 
 
 public:
+	void nullifyX()
+	{
+		for(auto &a: *x)
+		{
+			a = 0;
+		}
+	}
 	void setF()
 	{
 		A->multiplyA(*f);
